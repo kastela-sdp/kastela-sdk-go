@@ -54,14 +54,14 @@ func NewClient(kastelaUrl, caCertPath, clientCertPath, clientKeyPath string) *Cl
 	}
 }
 
-func (k *Client) request(method string, serverUrl *url.URL, data []byte) (resBody []byte, err error) {
+func (c *Client) request(method string, serverUrl *url.URL, data []byte) (resBody []byte, err error) {
 	reqBody := bytes.NewBuffer(data)
 	var req *http.Request
 	if req, err = http.NewRequest(method, serverUrl.String(), reqBody); err != nil {
 		return
 	}
 	var res *http.Response
-	if res, err = k.client.Do(req); err != nil {
+	if res, err = c.client.Do(req); err != nil {
 		return
 	}
 	defer res.Body.Close()
@@ -88,17 +88,17 @@ func (k *Client) request(method string, serverUrl *url.URL, data []byte) (resBod
 	return
 }
 
-func (k *Client) VaultStore(vaultId string, data []any) (ids []string, err error) {
+func (c *Client) VaultStore(vaultId string, data []any) (ids []string, err error) {
 	var reqBody []byte
 	if reqBody, err = json.Marshal(map[string]any{"data": data}); err != nil {
 		return
 	}
 	var serverUrl *url.URL
-	if serverUrl, err = url.Parse(fmt.Sprintf(`%s/%s/%s/store`, k.kastelaUrl, vaultPath, vaultId)); err != nil {
+	if serverUrl, err = url.Parse(fmt.Sprintf(`%s/%s/%s/store`, c.kastelaUrl, vaultPath, vaultId)); err != nil {
 		return
 	}
 	var resBody []byte
-	if resBody, err = k.request("POST", serverUrl, reqBody); err != nil {
+	if resBody, err = c.request("POST", serverUrl, reqBody); err != nil {
 		return
 	}
 	var body map[string]any
@@ -113,9 +113,9 @@ func (k *Client) VaultStore(vaultId string, data []any) (ids []string, err error
 	return
 }
 
-func (k *Client) VaultFetch(vaultId string, search string, params *FetchVaultParams) (ids []string, err error) {
+func (c *Client) VaultFetch(vaultId string, search string, params *FetchVaultParams) (ids []string, err error) {
 	var serverUrl *url.URL
-	if serverUrl, err = url.Parse(fmt.Sprintf(`%s/%s/%s`, k.kastelaUrl, vaultPath, vaultId)); err != nil {
+	if serverUrl, err = url.Parse(fmt.Sprintf(`%s/%s/%s`, c.kastelaUrl, vaultPath, vaultId)); err != nil {
 		return
 	}
 	query := serverUrl.Query()
@@ -130,7 +130,7 @@ func (k *Client) VaultFetch(vaultId string, search string, params *FetchVaultPar
 	}
 	serverUrl.RawQuery = query.Encode()
 	var resBody []byte
-	if resBody, err = k.request("GET", serverUrl, nil); err != nil {
+	if resBody, err = c.request("GET", serverUrl, nil); err != nil {
 		return
 	}
 	var body map[string]any
@@ -145,17 +145,17 @@ func (k *Client) VaultFetch(vaultId string, search string, params *FetchVaultPar
 	return
 }
 
-func (k *Client) VaultGet(vaultId string, ids []string) (data []any, err error) {
+func (c *Client) VaultGet(vaultId string, ids []string) (data []any, err error) {
 	var reqBody []byte
 	if reqBody, err = json.Marshal(map[string]any{"ids": ids}); err != nil {
 		return
 	}
 	var serverUrl *url.URL
-	if serverUrl, err = url.Parse(fmt.Sprintf(`%s/%s/%s/get`, k.kastelaUrl, vaultPath, vaultId)); err != nil {
+	if serverUrl, err = url.Parse(fmt.Sprintf(`%s/%s/%s/get`, c.kastelaUrl, vaultPath, vaultId)); err != nil {
 		return
 	}
 	var resBody []byte
-	if resBody, err = k.request("POST", serverUrl, reqBody); err != nil {
+	if resBody, err = c.request("POST", serverUrl, reqBody); err != nil {
 		return
 	}
 	var body map[string]any
@@ -166,58 +166,58 @@ func (k *Client) VaultGet(vaultId string, ids []string) (data []any, err error) 
 	return
 }
 
-func (k *Client) VaultUpdate(vaultId string, token string, data any) (err error) {
+func (c *Client) VaultUpdate(vaultId string, token string, data any) (err error) {
 	var reqBody []byte
 	if reqBody, err = json.Marshal(data); err != nil {
 		return
 	}
 	var serverUrl *url.URL
-	if serverUrl, err = url.Parse(fmt.Sprintf(`%s/%s/%s/%s`, k.kastelaUrl, vaultPath, vaultId, token)); err != nil {
+	if serverUrl, err = url.Parse(fmt.Sprintf(`%s/%s/%s/%s`, c.kastelaUrl, vaultPath, vaultId, token)); err != nil {
 		return
 	}
-	if _, err = k.request("PUT", serverUrl, reqBody); err != nil {
+	if _, err = c.request("PUT", serverUrl, reqBody); err != nil {
 		return
 	}
 	return
 }
 
-func (k *Client) VaultDelete(vaultId string, token string) (err error) {
+func (c *Client) VaultDelete(vaultId string, token string) (err error) {
 	var serverUrl *url.URL
-	if serverUrl, err = url.Parse(fmt.Sprintf(`%s/%s/%s/%s`, k.kastelaUrl, vaultPath, vaultId, token)); err != nil {
+	if serverUrl, err = url.Parse(fmt.Sprintf(`%s/%s/%s/%s`, c.kastelaUrl, vaultPath, vaultId, token)); err != nil {
 		return
 	}
-	if _, err = k.request("DELETE", serverUrl, nil); err != nil {
+	if _, err = c.request("DELETE", serverUrl, nil); err != nil {
 		return
 	}
 	return
 }
 
-func (k *Client) ProtectionSeal(protectionId string, ids []any) (err error) {
+func (c *Client) ProtectionSeal(protectionId string, ids []any) (err error) {
 	var reqBody []byte
 	if reqBody, err = json.Marshal(map[string]any{"ids": ids}); err != nil {
 		return
 	}
 	var serverUrl *url.URL
-	if serverUrl, err = url.Parse(fmt.Sprintf(`%s/%s/%s/seal`, k.kastelaUrl, protectionPath, protectionId)); err != nil {
+	if serverUrl, err = url.Parse(fmt.Sprintf(`%s/%s/%s/seal`, c.kastelaUrl, protectionPath, protectionId)); err != nil {
 		return
 	}
-	if _, err = k.request("POST", serverUrl, reqBody); err != nil {
+	if _, err = c.request("POST", serverUrl, reqBody); err != nil {
 		return
 	}
 	return
 }
 
-func (k *Client) ProtectionOpen(protectionId string, ids []any) (data []any, err error) {
+func (c *Client) ProtectionOpen(protectionId string, ids []any) (data []any, err error) {
 	var reqBody []byte
 	if reqBody, err = json.Marshal(map[string]any{"ids": ids}); err != nil {
 		return
 	}
 	var serverUrl *url.URL
-	if serverUrl, err = url.Parse(fmt.Sprintf(`%s/%s/%s/open`, k.kastelaUrl, protectionPath, protectionId)); err != nil {
+	if serverUrl, err = url.Parse(fmt.Sprintf(`%s/%s/%s/open`, c.kastelaUrl, protectionPath, protectionId)); err != nil {
 		return
 	}
 	var resBody []byte
-	if resBody, err = k.request("POST", serverUrl, reqBody); err != nil {
+	if resBody, err = c.request("POST", serverUrl, reqBody); err != nil {
 		return
 	}
 	var body map[string]any
