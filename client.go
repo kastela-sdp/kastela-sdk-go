@@ -29,6 +29,7 @@ type Client struct {
 	client     *http.Client
 }
 
+// Create a new Kastela Client instance for communicating with the server.
 func NewClient(kastelaUrl, caCertPath, clientCertPath, clientKeyPath string) *Client {
 	var err error
 	var caCert []byte
@@ -88,6 +89,7 @@ func (c *Client) request(method string, serverUrl *url.URL, data []byte) (resBod
 	return
 }
 
+// Store batch vault data on the server.
 func (c *Client) VaultStore(vaultId string, data []any) (ids []string, err error) {
 	var reqBody []byte
 	if reqBody, err = json.Marshal(map[string]any{"data": data}); err != nil {
@@ -113,6 +115,7 @@ func (c *Client) VaultStore(vaultId string, data []any) (ids []string, err error
 	return
 }
 
+// Search vault data by indexed column.
 func (c *Client) VaultFetch(vaultId string, search string, params *FetchVaultParams) (ids []string, err error) {
 	var serverUrl *url.URL
 	if serverUrl, err = url.Parse(fmt.Sprintf(`%s/%s/%s`, c.kastelaUrl, vaultPath, vaultId)); err != nil {
@@ -145,6 +148,7 @@ func (c *Client) VaultFetch(vaultId string, search string, params *FetchVaultPar
 	return
 }
 
+// Get batch vault data by vault data ids.
 func (c *Client) VaultGet(vaultId string, ids []string) (data []any, err error) {
 	var reqBody []byte
 	if reqBody, err = json.Marshal(map[string]any{"ids": ids}); err != nil {
@@ -166,6 +170,7 @@ func (c *Client) VaultGet(vaultId string, ids []string) (data []any, err error) 
 	return
 }
 
+// Update vault data by vault data id.
 func (c *Client) VaultUpdate(vaultId string, token string, data any) (err error) {
 	var reqBody []byte
 	if reqBody, err = json.Marshal(data); err != nil {
@@ -181,6 +186,7 @@ func (c *Client) VaultUpdate(vaultId string, token string, data any) (err error)
 	return
 }
 
+// Remove vault data by vault data id.
 func (c *Client) VaultDelete(vaultId string, token string) (err error) {
 	var serverUrl *url.URL
 	if serverUrl, err = url.Parse(fmt.Sprintf(`%s/%s/%s/%s`, c.kastelaUrl, vaultPath, vaultId, token)); err != nil {
@@ -192,6 +198,7 @@ func (c *Client) VaultDelete(vaultId string, token string) (err error) {
 	return
 }
 
+// Encrypt data protection by protection data ids, which can be used after storing data or updating data.
 func (c *Client) ProtectionSeal(protectionId string, ids []any) (err error) {
 	var reqBody []byte
 	if reqBody, err = json.Marshal(map[string]any{"ids": ids}); err != nil {
@@ -207,6 +214,7 @@ func (c *Client) ProtectionSeal(protectionId string, ids []any) (err error) {
 	return
 }
 
+// Decrypt data protection by protection data ids.
 func (c *Client) ProtectionOpen(protectionId string, ids []any) (data []any, err error) {
 	var reqBody []byte
 	if reqBody, err = json.Marshal(map[string]any{"ids": ids}); err != nil {
