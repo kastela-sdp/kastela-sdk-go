@@ -90,6 +90,13 @@ func (c *Client) request(method string, serverUrl *url.URL, data []byte) (resBod
 }
 
 // Store batch vault data on the server.
+//
+//	// prepare input data
+//	var vaultData []any
+//	vaultData = append(vaultData, map[string]any{"name": "jhon doe", "secret" : "12345678"})
+//	vaultData = append(vaultData, map[string]any{"name": "jane doe", "secret" : "12345678"})
+//	// store data to vault
+//	client.VaultStore("yourVaultId", vaultData)
 func (c *Client) VaultStore(vaultId string, data []any) (ids []string, err error) {
 	var reqBody []byte
 	if reqBody, err = json.Marshal(map[string]any{"data": data}); err != nil {
@@ -116,6 +123,9 @@ func (c *Client) VaultStore(vaultId string, data []any) (ids []string, err error
 }
 
 // Search vault data by indexed column.
+//
+//	// search "jhon doe" data
+//	client.VaultFetch("yourVaultId", "jhon doe", nil)
 func (c *Client) VaultFetch(vaultId string, search string, params *FetchVaultParams) (ids []string, err error) {
 	var serverUrl *url.URL
 	if serverUrl, err = url.Parse(fmt.Sprintf(`%s/%s/%s`, c.kastelaUrl, vaultPath, vaultId)); err != nil {
@@ -149,6 +159,8 @@ func (c *Client) VaultFetch(vaultId string, search string, params *FetchVaultPar
 }
 
 // Get batch vault data by vault data ids.
+//
+//	client.VaultGet("yourVaultId", []string{"d2657324-59f3-4bd4-92b0-c7f5e5ef7269", "331787a5-8930-4167-828f-7e783aeb158c"})
 func (c *Client) VaultGet(vaultId string, ids []string) (data []any, err error) {
 	var reqBody []byte
 	if reqBody, err = json.Marshal(map[string]any{"ids": ids}); err != nil {
@@ -171,6 +183,9 @@ func (c *Client) VaultGet(vaultId string, ids []string) (data []any, err error) 
 }
 
 // Update vault data by vault data id.
+//
+// 	client.VaultUpdate("yourVaultId", "331787a5-8930-4167-828f-7e783aeb158c", map[string]any{"name": "jane d'arc", "secret" : "12345678"})
+
 func (c *Client) VaultUpdate(vaultId string, token string, data any) (err error) {
 	var reqBody []byte
 	if reqBody, err = json.Marshal(data); err != nil {
@@ -187,6 +202,8 @@ func (c *Client) VaultUpdate(vaultId string, token string, data any) (err error)
 }
 
 // Remove vault data by vault data id.
+//
+//	client.VaultDelete("yourVaultId", "331787a5-8930-4167-828f-7e783aeb158c")
 func (c *Client) VaultDelete(vaultId string, token string) (err error) {
 	var serverUrl *url.URL
 	if serverUrl, err = url.Parse(fmt.Sprintf(`%s/%s/%s/%s`, c.kastelaUrl, vaultPath, vaultId, token)); err != nil {
@@ -199,6 +216,9 @@ func (c *Client) VaultDelete(vaultId string, token string) (err error) {
 }
 
 // Encrypt data protection by protection data ids, which can be used after storing data or updating data.
+//
+//		// protect data with id 1,2,3,4,5
+//	client.ProtectionSeal("yourProtectionId", []any{1,2,3,4,5})
 func (c *Client) ProtectionSeal(protectionId string, ids []any) (err error) {
 	var reqBody []byte
 	if reqBody, err = json.Marshal(map[string]any{"ids": ids}); err != nil {
@@ -215,6 +235,9 @@ func (c *Client) ProtectionSeal(protectionId string, ids []any) (err error) {
 }
 
 // Decrypt data protection by protection data ids.
+//
+//		// decript data with id 1,2,3,4,5
+//	client.ProtectionOpen("yourProtectionId", []any{1,2,3,4,5})
 func (c *Client) ProtectionOpen(protectionId string, ids []any) (data []any, err error) {
 	var reqBody []byte
 	if reqBody, err = json.Marshal(map[string]any{"ids": ids}); err != nil {
