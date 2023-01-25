@@ -32,16 +32,16 @@ type Client struct {
 }
 
 type PrivacyProxyCommon struct {
-	Protections any `json:"protections"`
-	Vaults      any `json:"vaults"`
+	Protections map[string]string   `json:"protections"`
+	Vaults      map[string][]string `json:"vaults"`
 }
 
 type PrivacyProxyOptions struct {
-	Headers *any    `json:"headers"`
-	Params  *any    `json:"params"`
-	Body    *any    `json:"body"`
-	Query   *any    `json:"query"`
-	RootTag *string `json:"rootTag"`
+	Headers map[string]any `json:"headers"`
+	Params  map[string]any `json:"params"`
+	Body    map[string]any `json:"body"`
+	Query   map[string]any `json:"query"`
+	RootTag string         `json:"rootTag"`
 }
 
 // Create a new Kastela Client instance for communicating with the server.
@@ -320,6 +320,37 @@ func (c *Client) SecureChannelCommit(secureChannelId string) (err error) {
 }
 
 // Proxying request.
+//
+//	 // call request
+//		client.PrivacyProxyRequest("json", "https://enskbwhbhec7l.x.pipedream.net/:_phone/:_salary", "post", kastela.PrivacyProxyCommon{
+//			Protections: map[string]string{
+//				"_email": "124edec8-530e-4fd2-a04b-d4dc21ce625a",
+//				"_phone": "9f53aa3b-7214-436d-af9b-d2952be9f0c4",
+//			}, Vaults: map[string][]string{
+//				"_salary": {
+//					"c5f9236d-aea0-46a5-a2fe-fb75c0596c87",
+//					"salary",
+//				},
+//			},
+//		}, &kastela.PrivacyProxyOptions{
+//			Headers: map[string]any{
+//				"_email": "1",
+//			},
+//			Params: map[string]any{
+//				"_phone":  "1",
+//				"_salary": "01GQEATT1Q3NKKDC3A2JSMN7ZJ",
+//			},
+//			Body: map[string]any{
+//				"name":    "jhon daeng",
+//				"_email":  "1",
+//				"_phone":  "1",
+//				"_salary": "01GQEATT1Q3NKKDC3A2JSMN7ZJ",
+//			},
+//			Query: map[string]any{
+//				"id":     "123456789",
+//				"_email": "1",
+//			},
+//		})
 func (c *Client) PrivacyProxyRequest(bodyType string, targetUrl string, method string, common PrivacyProxyCommon, options *PrivacyProxyOptions) (response any, err error) {
 	var reqBody []byte
 	if reqBody, err = json.Marshal(map[string]any{
@@ -327,11 +358,7 @@ func (c *Client) PrivacyProxyRequest(bodyType string, targetUrl string, method s
 		"url":     targetUrl,
 		"method":  method,
 		"common":  common,
-		"headers": options.Headers,
-		"params":  options.Params,
-		"body":    options.Body,
-		"query":   options.Query,
-		"rootTag": options.RootTag,
+		"options": options,
 	}); err != nil {
 		return
 	}
@@ -348,6 +375,7 @@ func (c *Client) PrivacyProxyRequest(bodyType string, targetUrl string, method s
 	if err = json.Unmarshal(resBody, &body); err != nil {
 		return
 	}
+
 	response = body
 	return
 }
