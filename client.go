@@ -24,10 +24,24 @@ const expectedKastelaVersion string = "v0.1"
 const vaultPath string = "api/vault"
 const protectionPath string = "api/protection"
 const secureChannelPath string = "api/secure-channel"
+const privacyProxyPath string = "api/proxy"
 
 type Client struct {
 	kastelaUrl string
 	client     *http.Client
+}
+
+type PrivacyProxyCommon struct {
+	Protections map[string]string   `json:"protections"`
+	Vaults      map[string][]string `json:"vaults"`
+}
+
+type PrivacyProxyOptions struct {
+	Headers map[string]any `json:"headers"`
+	Params  map[string]any `json:"params"`
+	Body    map[string]any `json:"body"`
+	Query   map[string]any `json:"query"`
+	RootTag string         `json:"rootTag"`
 }
 
 // Create a new Kastela Client instance for communicating with the server.
@@ -218,7 +232,7 @@ func (c *Client) VaultDelete(vaultId string, token string) (err error) {
 
 // Encrypt data protection by protection data ids, which can be used after storing data or updating data.
 //
-//		// protect data with id 1,2,3,4,5
+//	// protect data with id 1,2,3,4,5
 //	client.ProtectionSeal("yourProtectionId", []any{1,2,3,4,5})
 func (c *Client) ProtectionSeal(protectionId string, ids []any) (err error) {
 	var reqBody []byte
@@ -237,7 +251,7 @@ func (c *Client) ProtectionSeal(protectionId string, ids []any) (err error) {
 
 // Decrypt data protection by protection data ids.
 //
-//		// decript data with id 1,2,3,4,5
+//	// decript data with id 1,2,3,4,5
 //	client.ProtectionOpen("yourProtectionId", []any{1,2,3,4,5})
 func (c *Client) ProtectionOpen(protectionId string, ids []any) (data []any, err error) {
 	var reqBody []byte
@@ -262,7 +276,7 @@ func (c *Client) ProtectionOpen(protectionId string, ids []any) (data []any, err
 
 // Begin secure channel.
 //
-//	  // begin secure channel
+//	// begin secure channel
 //	client.SecureChannelBegin("yourProtectionId", "yourClientPublicKey", 5)
 func (c *Client) SecureChannelBegin(protectionId string, clientPublicKey string, ttl int) (id string, serverPublicKey string, err error) {
 	var reqBody []byte
@@ -292,7 +306,7 @@ func (c *Client) SecureChannelBegin(protectionId string, clientPublicKey string,
 
 // Commit secure channel.
 //
-//	  // commit secure channel
+//	// commit secure channel
 //	client.SecureChannelCommit("yourSecureChannelId")
 func (c *Client) SecureChannelCommit(secureChannelId string) (err error) {
 	var serverUrl *url.URL
@@ -302,5 +316,66 @@ func (c *Client) SecureChannelCommit(secureChannelId string) (err error) {
 	if _, err = c.request("POST", serverUrl, nil); err != nil {
 		return
 	}
+	return
+}
+
+// Proxying request.
+//
+//	 // call request
+//		client.PrivacyProxyRequest("json", "https://enskbwhbhec7l.x.pipedream.net/:_phone/:_salary", "post", kastela.PrivacyProxyCommon{
+//			Protections: map[string]string{
+//				"_email": "124edec8-530e-4fd2-a04b-d4dc21ce625a",
+//				"_phone": "9f53aa3b-7214-436d-af9b-d2952be9f0c4",
+//			}, Vaults: map[string][]string{
+//				"_salary": {
+//					"c5f9236d-aea0-46a5-a2fe-fb75c0596c87",
+//					"salary",
+//				},
+//			},
+//		}, &kastela.PrivacyProxyOptions{
+//			Headers: map[string]any{
+//				"_email": "1",
+//			},
+//			Params: map[string]any{
+//				"_phone":  "1",
+//				"_salary": "01GQEATT1Q3NKKDC3A2JSMN7ZJ",
+//			},
+//			Body: map[string]any{
+//				"name":    "jhon daeng",
+//				"_email":  "1",
+//				"_phone":  "1",
+//				"_salary": "01GQEATT1Q3NKKDC3A2JSMN7ZJ",
+//			},
+//			Query: map[string]any{
+//				"id":     "123456789",
+//				"_email": "1",
+//			},
+//		})
+func (c *Client) PrivacyProxyRequest(bodyType string, targetUrl string, method string, common PrivacyProxyCommon, options *PrivacyProxyOptions) (response any, err error) {
+	var reqBody []byte
+	if reqBody, err = json.Marshal(map[string]any{
+		"type":    bodyType,
+		"url":     targetUrl,
+		"method":  method,
+		"common":  common,
+		"options": options,
+	}); err != nil {
+		return
+	}
+	var serverUrl *url.URL
+	if serverUrl, err = url.Parse(fmt.Sprintf(`%s/%s`, c.kastelaUrl, privacyProxyPath)); err != nil {
+		return
+	}
+	var resBody []byte
+	if resBody, err = c.request("POST", serverUrl, reqBody); err != nil {
+		return
+	}
+
+	var body map[string]any
+	if err = json.Unmarshal(resBody, &body); err != nil {
+		return
+	}
+
+	response = body
 	return
 }
