@@ -15,6 +15,13 @@ import (
 	"golang.org/x/mod/semver"
 )
 
+type Operation string
+
+const (
+	OperationWrite Operation = "WRITE"
+	OperationRead  Operation = "READ"
+)
+
 type FetchVaultParams struct {
 	Size  uint64
 	After string
@@ -23,7 +30,7 @@ type FetchVaultParams struct {
 const expectedKastelaVersion string = "v0.2"
 const vaultPath string = "api/vault"
 const protectionPath string = "api/protection"
-const secureChannelPath string = "api/secure-channel"
+const securePath string = "api/secure"
 const privacyProxyPath string = "api/proxy"
 
 type Client struct {
@@ -274,21 +281,21 @@ func (c *Client) ProtectionOpen(protectionId string, ids []any) (data []any, err
 	return
 }
 
-// Begin secure channel.
+// Initialize secure protection.
 //
-//	// begin secure channel
-//	client.SecureChannelBegin("yourProtectionId", "yourClientPublicKey", 5)
-func (c *Client) SecureChannelBegin(protectionId string, clientPublicKey string, ttl int) (id string, serverPublicKey string, err error) {
+//	// Initialize secure protection
+//	client.SecureProtectionInit("WRITE", []string{"yourProtectionId"}, 5)
+func (c *Client) SecureProtectionInit(operation Operation, protectionIds []string, ttl int) (credential string, err error) {
 	var reqBody []byte
 	if reqBody, err = json.Marshal(map[string]any{
-		"protection_id":     protectionId,
-		"client_public_key": clientPublicKey,
-		"ttl":               ttl,
+		"operation":      operation,
+		"protection_ids": protectionIds,
+		"ttl":            ttl,
 	}); err != nil {
 		return
 	}
 	var serverUrl *url.URL
-	if serverUrl, err = url.Parse(fmt.Sprintf(`%s/%s/begin`, c.kastelaUrl, secureChannelPath)); err != nil {
+	if serverUrl, err = url.Parse(fmt.Sprintf(`%s/%s/protection/init`, c.kastelaUrl, securePath)); err != nil {
 		return
 	}
 	var resBody []byte
@@ -299,23 +306,26 @@ func (c *Client) SecureChannelBegin(protectionId string, clientPublicKey string,
 	if err = json.Unmarshal(resBody, &body); err != nil {
 		return
 	}
-	id = body["id"].(string)
-	serverPublicKey = body["server_public_key"].(string)
+	credential = body["credential"].(string)
 	return
 }
 
-// Commit secure channel.
+// Commit secure protection.
 //
-//	// commit secure channel
-//	client.SecureChannelCommit("yourSecureChannelId")
-func (c *Client) SecureChannelCommit(secureChannelId string) (err error) {
+//	// commit secure protection
+//	client.SecureProtectionCommit("yourCredential")
+func (c *Client) SecureProtectionCommit(credential string) (err error) {
+	var reqBody []byte
+	if reqBody, err = json.Marshal(map[string]any{
+		"credential": credential,
+	}); err != nil {
+		return
+	}
 	var serverUrl *url.URL
-	if serverUrl, err = url.Parse(fmt.Sprintf(`%s/%s/%s/commit`, c.kastelaUrl, secureChannelPath, secureChannelId)); err != nil {
+	if serverUrl, err = url.Parse(fmt.Sprintf(`%s/%s/protection/commit`, c.kastelaUrl, securePath)); err != nil {
 		return
 	}
-	if _, err = c.request("POST", serverUrl, nil); err != nil {
-		return
-	}
+	_, err = c.request("POST", serverUrl, reqBody)
 	return
 }
 
@@ -370,12 +380,10 @@ func (c *Client) PrivacyProxyRequest(bodyType string, targetUrl string, method s
 	if resBody, err = c.request("POST", serverUrl, reqBody); err != nil {
 		return
 	}
-
 	var body map[string]any
 	if err = json.Unmarshal(resBody, &body); err != nil {
 		return
 	}
-
 	response = body
 	return
 }
