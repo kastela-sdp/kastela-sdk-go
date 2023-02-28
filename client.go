@@ -27,7 +27,7 @@ type FetchVaultParams struct {
 	After string
 }
 
-const expectedKastelaVersion string = "v0.2"
+const expectedKastelaVersion string = "v0.3"
 const vaultPath string = "api/vault"
 const protectionPath string = "api/protection"
 const securePath string = "api/secure"
