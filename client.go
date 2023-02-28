@@ -27,15 +27,20 @@ type FetchVaultParams struct {
 	After string
 }
 
-const expectedKastelaVersion string = "v0.2"
+const expectedKastelaVersion string = "v0.3"
 const vaultPath string = "api/vault"
 const protectionPath string = "api/protection"
 const securePath string = "api/secure"
 const privacyProxyPath string = "api/proxy"
 
-type Client struct {
-	kastelaUrl string
-	client     *http.Client
+type ProtectionSealInput struct {
+	ProtectionId string `json:"protection_id"`
+	PrimaryKeys  []any  `json:"primary_keys"`
+}
+
+type ProtectionOpenInput struct {
+	ProtectionId string `json:"protection_id"`
+	Tokens       []any  `json:"tokens"`
 }
 
 type PrivacyProxyCommon struct {
@@ -49,6 +54,11 @@ type PrivacyProxyOptions struct {
 	Body    map[string]any `json:"body"`
 	Query   map[string]any `json:"query"`
 	RootTag string         `json:"rootTag"`
+}
+
+type Client struct {
+	kastelaUrl string
+	client     *http.Client
 }
 
 // Create a new Kastela Client instance for communicating with the server.
@@ -237,36 +247,34 @@ func (c *Client) VaultDelete(vaultId string, token string) (err error) {
 	return
 }
 
-// Encrypt data protection by protection data ids, which can be used after storing data or updating data.
+// Encrypt data protection
 //
-//	// protect data with id 1,2,3,4,5
-//	client.ProtectionSeal("yourProtectionId", []any{1,2,3,4,5})
-func (c *Client) ProtectionSeal(protectionId string, ids []any) (err error) {
+//	// sample code
+//	err := client.protectionSeal([]*ProtectionSealInput{ProtectionId: "your-protection-id", PrimaryKeys: []any{1, 2, 3, 4, 5}})
+func (c *Client) ProtectionSeal(input []*ProtectionSealInput) (err error) {
 	var reqBody []byte
-	if reqBody, err = json.Marshal(map[string]any{"ids": ids}); err != nil {
+	if reqBody, err = json.Marshal(input); err != nil {
 		return
 	}
 	var serverUrl *url.URL
-	if serverUrl, err = url.Parse(fmt.Sprintf(`%s/%s/%s/seal`, c.kastelaUrl, protectionPath, protectionId)); err != nil {
+	if serverUrl, err = url.Parse(fmt.Sprintf(`%s/%s/seal`, c.kastelaUrl, protectionPath)); err != nil {
 		return
 	}
-	if _, err = c.request("POST", serverUrl, reqBody); err != nil {
-		return
-	}
+	_, err = c.request("POST", serverUrl, reqBody)
 	return
 }
 
-// Decrypt data protection by protection data ids.
+// Decrypt data protection
 //
-//	// decript data with id 1,2,3,4,5
-//	client.ProtectionOpen("yourProtectionId", []any{1,2,3,4,5})
-func (c *Client) ProtectionOpen(protectionId string, ids []any) (data []any, err error) {
+//	// sample code
+//	data, err := client.protectionOpen([]*ProtectionOpenInput{ProtectionId: "your-protection-id", Tokens: []any{a, b, c, d, e}})
+func (c *Client) ProtectionOpen(input []*ProtectionOpenInput) (data [][]any, err error) {
 	var reqBody []byte
-	if reqBody, err = json.Marshal(map[string]any{"ids": ids}); err != nil {
+	if reqBody, err = json.Marshal(input); err != nil {
 		return
 	}
 	var serverUrl *url.URL
-	if serverUrl, err = url.Parse(fmt.Sprintf(`%s/%s/%s/open`, c.kastelaUrl, protectionPath, protectionId)); err != nil {
+	if serverUrl, err = url.Parse(fmt.Sprintf(`%s/%s/open`, c.kastelaUrl, protectionPath)); err != nil {
 		return
 	}
 	var resBody []byte
@@ -277,14 +285,17 @@ func (c *Client) ProtectionOpen(protectionId string, ids []any) (data []any, err
 	if err = json.Unmarshal(resBody, &body); err != nil {
 		return
 	}
-	data = body["data"].([]any)
+	data = [][]any{}
+	for _, v := range body["data"].([]any) {
+		data = append(data, v.([]any))
+	}
 	return
 }
 
-// Initialize secure protection.
+// Initialize secure protection
 //
-//	// Initialize secure protection
-//	client.SecureProtectionInit("WRITE", []string{"yourProtectionId"}, 5)
+//	// sample code
+//	credential, err := client.SecureProtectionInit("WRITE", []string{"your-protection-id"}, 5)
 func (c *Client) SecureProtectionInit(operation Operation, protectionIds []string, ttl int) (credential string, err error) {
 	var reqBody []byte
 	if reqBody, err = json.Marshal(map[string]any{
@@ -310,10 +321,10 @@ func (c *Client) SecureProtectionInit(operation Operation, protectionIds []strin
 	return
 }
 
-// Commit secure protection.
+// Commit secure protection
 //
-//	// commit secure protection
-//	client.SecureProtectionCommit("yourCredential")
+//	// sample code
+//	err := client.SecureProtectionCommit("your-credential")
 func (c *Client) SecureProtectionCommit(credential string) (err error) {
 	var reqBody []byte
 	if reqBody, err = json.Marshal(map[string]any{
@@ -329,38 +340,37 @@ func (c *Client) SecureProtectionCommit(credential string) (err error) {
 	return
 }
 
-// Proxying request.
+// Proxying request to another host
 //
-//	 // call request
-//		client.PrivacyProxyRequest("json", "https://enskbwhbhec7l.x.pipedream.net/:_phone/:_salary", "post", kastela.PrivacyProxyCommon{
-//			Protections: map[string]string{
-//				"_email": "124edec8-530e-4fd2-a04b-d4dc21ce625a",
-//				"_phone": "9f53aa3b-7214-436d-af9b-d2952be9f0c4",
-//			}, Vaults: map[string][]string{
-//				"_salary": {
-//					"c5f9236d-aea0-46a5-a2fe-fb75c0596c87",
-//					"salary",
-//				},
-//			},
-//		}, &kastela.PrivacyProxyOptions{
-//			Headers: map[string]any{
-//				"_email": "1",
-//			},
-//			Params: map[string]any{
-//				"_phone":  "1",
-//				"_salary": "01GQEATT1Q3NKKDC3A2JSMN7ZJ",
-//			},
-//			Body: map[string]any{
-//				"name":    "jhon daeng",
-//				"_email":  "1",
-//				"_phone":  "1",
-//				"_salary": "01GQEATT1Q3NKKDC3A2JSMN7ZJ",
-//			},
-//			Query: map[string]any{
-//				"id":     "123456789",
-//				"_email": "1",
-//			},
-//		})
+//	response, err := client.PrivacyProxyRequest("json", "https://enskbwhbhec7l.x.pipedream.net/:_phone/:_salary", "post", kastela.PrivacyProxyCommon{
+//	    Protections: map[string]string{
+//	        "_email": "124edec8-530e-4fd2-a04b-d4dc21ce625a",
+//	        "_phone": "9f53aa3b-7214-436d-af9b-d2952be9f0c4",
+//	    }, Vaults: map[string][]string{
+//	        "_salary": {
+//	            "c5f9236d-aea0-46a5-a2fe-fb75c0596c87",
+//	            "salary",
+//	        },
+//	    },
+//	}, &kastela.PrivacyProxyOptions{
+//	    Headers: map[string]any{
+//	        "_email": "1",
+//	    },
+//	    Params: map[string]any{
+//	        "_phone":  "1",
+//	        "_salary": "01GQEATT1Q3NKKDC3A2JSMN7ZJ",
+//	    },
+//	    Body: map[string]any{
+//	        "name":    "jhon daeng",
+//	        "_email":  "1",
+//	        "_phone":  "1",
+//	        "_salary": "01GQEATT1Q3NKKDC3A2JSMN7ZJ",
+//	    },
+//	    Query: map[string]any{
+//	        "id":     "123456789",
+//	        "_email": "1",
+//	    },
+//	})
 func (c *Client) PrivacyProxyRequest(bodyType string, targetUrl string, method string, common PrivacyProxyCommon, options *PrivacyProxyOptions) (response any, err error) {
 	var reqBody []byte
 	if reqBody, err = json.Marshal(map[string]any{
