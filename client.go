@@ -15,6 +15,12 @@ import (
 	"golang.org/x/mod/semver"
 )
 
+const expectedKastelaVersion string = "v0.3"
+const vaultPath string = "api/vault"
+const protectionPath string = "api/protection"
+const securePath string = "api/secure"
+const privacyProxyPath string = "api/proxy"
+
 type Operation string
 
 const (
@@ -22,24 +28,45 @@ const (
 	OperationRead  Operation = "READ"
 )
 
-type FetchVaultParams struct {
-	Size  uint64
-	After string
+type VaultStoreInput struct {
+	VaultID string `json:"vault_id"`
+	Values  []any  `json:"values"`
 }
 
-const expectedKastelaVersion string = "v0.3"
-const vaultPath string = "api/vault"
-const protectionPath string = "api/protection"
-const securePath string = "api/secure"
-const privacyProxyPath string = "api/proxy"
+type VaultFetchInput struct {
+	VaultID string `json:"vault_id"`
+	Search  any    `json:"search"`
+	Size    uint64 `json:"size"`
+	After   string `json:"after"`
+}
+
+type VaultGetInput struct {
+	VaultID string   `json:"vault_id"`
+	Tokens  []string `json:"tokens"`
+}
+
+type VaultUpdateInputValue struct {
+	Token string `json:"token"`
+	Value any    `json:"value"`
+}
+
+type VaultUpdateInput struct {
+	VaultID string                   `json:"vault_id"`
+	Values  []*VaultUpdateInputValue `json:"values"`
+}
+
+type VaultDeleteInput struct {
+	VaultID string   `json:"vault_id"`
+	Tokens  []string `json:"tokens"`
+}
 
 type ProtectionSealInput struct {
-	ProtectionId string `json:"protection_id"`
+	ProtectionID string `json:"protection_id"`
 	PrimaryKeys  []any  `json:"primary_keys"`
 }
 
 type ProtectionOpenInput struct {
-	ProtectionId string `json:"protection_id"`
+	ProtectionID string `json:"protection_id"`
 	Tokens       []any  `json:"tokens"`
 }
 
@@ -61,7 +88,7 @@ type Client struct {
 	client     *http.Client
 }
 
-// Create a new Kastela Client instance for communicating with the server.
+// Create a new Kastela Client instance for communicating with the server. Require server information and return client instance.
 func NewClient(kastelaUrl, caCertPath, clientCertPath, clientKeyPath string) *Client {
 	var err error
 	var caCert []byte
@@ -121,21 +148,17 @@ func (c *Client) request(method string, serverUrl *url.URL, data []byte) (resBod
 	return
 }
 
-// Store batch vault data on the server.
+// Store vault data
 //
-//	// prepare input data
-//	var vaultData []any
-//	vaultData = append(vaultData, map[string]any{"name": "jhon doe", "secret" : "12345678"})
-//	vaultData = append(vaultData, map[string]any{"name": "jane doe", "secret" : "12345678"})
-//	// store data to vault
-//	client.VaultStore("yourVaultId", vaultData)
-func (c *Client) VaultStore(vaultId string, data []any) (ids []string, err error) {
+//	// sample code
+//	tokens, err = client.VaultStore([]*kastela.VaultStoreInput{{VaultID: "your-vault-id", Values: []any{ "foo", 1 }}})
+func (c *Client) VaultStore(input []*VaultStoreInput) (tokens [][]string, err error) {
 	var reqBody []byte
-	if reqBody, err = json.Marshal(map[string]any{"data": data}); err != nil {
+	if reqBody, err = json.Marshal(input); err != nil {
 		return
 	}
 	var serverUrl *url.URL
-	if serverUrl, err = url.Parse(fmt.Sprintf(`%s/%s/%s/store`, c.kastelaUrl, vaultPath, vaultId)); err != nil {
+	if serverUrl, err = url.Parse(fmt.Sprintf(`%s/%s/store`, c.kastelaUrl, vaultPath)); err != nil {
 		return
 	}
 	var resBody []byte
@@ -146,60 +169,67 @@ func (c *Client) VaultStore(vaultId string, data []any) (ids []string, err error
 	if err = json.Unmarshal(resBody, &body); err != nil {
 		return
 	}
-	idsAny := body["ids"].([]any)
-	ids = make([]string, len(idsAny))
-	for i, v := range idsAny {
-		ids[i] = v.(string)
+	tokensAny := body["tokens"].([]any)
+	tokens = make([][]string, len(tokensAny))
+	for i, v := range tokensAny {
+		vAny := v.([]any)
+		tokens[i] = make([]string, len(vAny))
+		for j, w := range vAny {
+			tokens[i][j] = w.(string)
+		}
 	}
 	return
 }
 
-// Search vault data by indexed column.
+// Search vault data by indexed column
 //
-//	// search "jhon doe" data
-//	client.VaultFetch("yourVaultId", "jhon doe", nil)
-func (c *Client) VaultFetch(vaultId string, search string, params *FetchVaultParams) (ids []string, err error) {
+//	// sample code
+//	tokens, err = client.VaultFetch(&VaultFetchInput{VaultID: "your-vault-id", Search: "foo", Size: 10, After: "bar"})
+func (c *Client) VaultFetch(input *VaultFetchInput) (tokens []string, err error) {
+	body := map[string]any{
+		"vault_id": input.VaultID,
+		"search":   input.Search,
+	}
+	if input.Size > 0 {
+		body["size"] = input.Size
+	}
+	if len(input.After) > 0 {
+		body["after"] = input.After
+	}
+	var reqBody []byte
+	if reqBody, err = json.Marshal(body); err != nil {
+		return
+	}
 	var serverUrl *url.URL
-	if serverUrl, err = url.Parse(fmt.Sprintf(`%s/%s/%s`, c.kastelaUrl, vaultPath, vaultId)); err != nil {
+	if serverUrl, err = url.Parse(fmt.Sprintf(`%s/%s/fetch`, c.kastelaUrl, vaultPath)); err != nil {
 		return
 	}
-	query := serverUrl.Query()
-	query.Set("search", search)
-	if params != nil {
-		if params.Size > 0 {
-			query.Set("size", fmt.Sprint(params.Size))
-		}
-		if len(params.After) > 0 {
-			query.Set("after", params.After)
-		}
-	}
-	serverUrl.RawQuery = query.Encode()
 	var resBody []byte
-	if resBody, err = c.request("GET", serverUrl, nil); err != nil {
+	if resBody, err = c.request("POST", serverUrl, reqBody); err != nil {
 		return
 	}
-	var body map[string]any
 	if err = json.Unmarshal(resBody, &body); err != nil {
 		return
 	}
-	idsAny := body["ids"].([]any)
-	ids = make([]string, len(idsAny))
-	for i, v := range idsAny {
-		ids[i] = v.(string)
+	tokensAny := body["tokens"].([]any)
+	tokens = make([]string, len(tokensAny))
+	for i, v := range tokensAny {
+		tokens[i] = v.(string)
 	}
 	return
 }
 
-// Get batch vault data by vault data ids.
+// Get vault data
 //
-//	client.VaultGet("yourVaultId", []string{"d2657324-59f3-4bd4-92b0-c7f5e5ef7269", "331787a5-8930-4167-828f-7e783aeb158c"})
-func (c *Client) VaultGet(vaultId string, ids []string) (data []any, err error) {
+//	// sample code
+//	values, err = client.VaultGet([]*VaultGetInput{{VaultID: "your-vault-id", Tokens: []string{ "foo", "bar"}}})
+func (c *Client) VaultGet(input []*VaultGetInput) (values [][]any, err error) {
 	var reqBody []byte
-	if reqBody, err = json.Marshal(map[string]any{"ids": ids}); err != nil {
+	if reqBody, err = json.Marshal(input); err != nil {
 		return
 	}
 	var serverUrl *url.URL
-	if serverUrl, err = url.Parse(fmt.Sprintf(`%s/%s/%s/get`, c.kastelaUrl, vaultPath, vaultId)); err != nil {
+	if serverUrl, err = url.Parse(fmt.Sprintf(`%s/%s/get`, c.kastelaUrl, vaultPath)); err != nil {
 		return
 	}
 	var resBody []byte
@@ -210,47 +240,52 @@ func (c *Client) VaultGet(vaultId string, ids []string) (data []any, err error) 
 	if err = json.Unmarshal(resBody, &body); err != nil {
 		return
 	}
-	data = body["data"].([]any)
+	valuesAny := body["values"].([]any)
+	values = make([][]any, len(valuesAny))
+	for i, v := range valuesAny {
+		values[i] = v.([]any)
+	}
 	return
 }
 
-// Update vault data by vault data id.
+// Update vault data
 //
-// 	client.VaultUpdate("yourVaultId", "331787a5-8930-4167-828f-7e783aeb158c", map[string]any{"name": "jane d'arc", "secret" : "12345678"})
-
-func (c *Client) VaultUpdate(vaultId string, token string, data any) (err error) {
+//	// sample code
+//	err = client.VaultUpdate([]*VaultUpdateInput{{VaultID: "your-vault-id", Values: []*VaultUpdateInputValue{{Token: "foo", Value: 123456}}}})
+func (c *Client) VaultUpdate(input []*VaultUpdateInput) (err error) {
 	var reqBody []byte
-	if reqBody, err = json.Marshal(data); err != nil {
+	if reqBody, err = json.Marshal(input); err != nil {
 		return
 	}
 	var serverUrl *url.URL
-	if serverUrl, err = url.Parse(fmt.Sprintf(`%s/%s/%s/%s`, c.kastelaUrl, vaultPath, vaultId, token)); err != nil {
+	if serverUrl, err = url.Parse(fmt.Sprintf(`%s/%s/update`, c.kastelaUrl, vaultPath)); err != nil {
 		return
 	}
-	if _, err = c.request("PUT", serverUrl, reqBody); err != nil {
-		return
-	}
+	_, err = c.request("POST", serverUrl, reqBody)
 	return
 }
 
-// Remove vault data by vault data id.
+// Remove vault data
 //
-//	client.VaultDelete("yourVaultId", "331787a5-8930-4167-828f-7e783aeb158c")
-func (c *Client) VaultDelete(vaultId string, token string) (err error) {
+//	// sample code
+//	err = client.VaultDelete([]*VaultDeleteInput{{VaultID: "your-vault-id", Tokens: []string{"foo", "bar"}}})
+func (c *Client) VaultDelete(input []*VaultDeleteInput) (err error) {
+	var reqBody []byte
+	if reqBody, err = json.Marshal(input); err != nil {
+		return
+	}
 	var serverUrl *url.URL
-	if serverUrl, err = url.Parse(fmt.Sprintf(`%s/%s/%s/%s`, c.kastelaUrl, vaultPath, vaultId, token)); err != nil {
+	if serverUrl, err = url.Parse(fmt.Sprintf(`%s/%s/delete`, c.kastelaUrl, vaultPath)); err != nil {
 		return
 	}
-	if _, err = c.request("DELETE", serverUrl, nil); err != nil {
-		return
-	}
+	_, err = c.request("POST", serverUrl, reqBody)
 	return
 }
 
 // Encrypt data protection
 //
 //	// sample code
-//	err := client.protectionSeal([]*ProtectionSealInput{ProtectionId: "your-protection-id", PrimaryKeys: []any{1, 2, 3, 4, 5}})
+//	err := client.protectionSeal([]*ProtectionSealInput{ProtectionID: "your-protection-id", PrimaryKeys: []any{1, 2, 3}})
 func (c *Client) ProtectionSeal(input []*ProtectionSealInput) (err error) {
 	var reqBody []byte
 	if reqBody, err = json.Marshal(input); err != nil {
@@ -267,8 +302,8 @@ func (c *Client) ProtectionSeal(input []*ProtectionSealInput) (err error) {
 // Decrypt data protection
 //
 //	// sample code
-//	data, err := client.protectionOpen([]*ProtectionOpenInput{ProtectionId: "your-protection-id", Tokens: []any{a, b, c, d, e}})
-func (c *Client) ProtectionOpen(input []*ProtectionOpenInput) (data [][]any, err error) {
+//	values, err := client.protectionOpen([]*ProtectionOpenInput{ProtectionID: "your-protection-id", Tokens: []any{ "foo", "bar", "baz" }})
+func (c *Client) ProtectionOpen(input []*ProtectionOpenInput) (values [][]any, err error) {
 	var reqBody []byte
 	if reqBody, err = json.Marshal(input); err != nil {
 		return
@@ -285,9 +320,9 @@ func (c *Client) ProtectionOpen(input []*ProtectionOpenInput) (data [][]any, err
 	if err = json.Unmarshal(resBody, &body); err != nil {
 		return
 	}
-	data = [][]any{}
-	for _, v := range body["data"].([]any) {
-		data = append(data, v.([]any))
+	values = [][]any{}
+	for _, v := range body["values"].([]any) {
+		values = append(values, v.([]any))
 	}
 	return
 }
@@ -296,11 +331,11 @@ func (c *Client) ProtectionOpen(input []*ProtectionOpenInput) (data [][]any, err
 //
 //	// sample code
 //	credential, err := client.SecureProtectionInit("WRITE", []string{"your-protection-id"}, 5)
-func (c *Client) SecureProtectionInit(operation Operation, protectionIds []string, ttl int) (credential string, err error) {
+func (c *Client) SecureProtectionInit(operation Operation, protectionIDs []string, ttl int) (credential string, err error) {
 	var reqBody []byte
 	if reqBody, err = json.Marshal(map[string]any{
 		"operation":      operation,
-		"protection_ids": protectionIds,
+		"protection_ids": protectionIDs,
 		"ttl":            ttl,
 	}); err != nil {
 		return
