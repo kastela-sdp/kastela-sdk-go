@@ -11,15 +11,13 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-
-	"golang.org/x/mod/semver"
 )
 
-const expectedKastelaVersion string = "v0.3"
 const vaultPath string = "api/vault"
 const protectionPath string = "api/protection"
 const securePath string = "api/secure"
 const privacyProxyPath string = "api/proxy"
+const cryptoPath string = "api/crypto"
 
 type Operation string
 
@@ -27,6 +25,55 @@ const (
 	OperationWrite Operation = "WRITE"
 	OperationRead  Operation = "READ"
 )
+
+type EncryptionMode string
+
+const (
+	EncryptionModeAES_GCM            EncryptionMode = "AES_GCM"
+	EncryptionModeCHACHA20_POLY1305  EncryptionMode = "CHACHA20_POLY1305"
+	EncryptionModeXCHACHA20_POLY1305 EncryptionMode = "XCHACHA20_POLY1305"
+)
+
+type HashMode string
+
+const (
+	HashModeBLAKE2B_256 HashMode = "BLAKE2B_256"
+	HashModeBLAKE2B_512 HashMode = "BLAKE2B_512"
+	HashModeBLAKE2S_256 HashMode = "BLAKE2S_256"
+	HashModeBLAKE3_256  HashMode = "BLAKE3_256"
+	HashModeBLAKE3_512  HashMode = "BLAKE3_512"
+	HashModeSHA256      HashMode = "SHA256"
+	HashModeSHA512      HashMode = "SHA512"
+	HashModeSHA3_256    HashMode = "SHA3_256"
+	HashModeSHA3_512    HashMode = "SHA3_512"
+)
+
+type CryptoEncryptInput struct {
+	KeyID      string         `json:"key_id"`
+	Mode       EncryptionMode `json:"mode"`
+	Plaintexts []any          `json:"plaintexts"`
+}
+
+type CryptoHMACInput struct {
+	KeyID  string   `json:"key_id"`
+	Mode   HashMode `json:"mode"`
+	Values []any    `json:"values"`
+}
+
+type CryptoEqualInput struct {
+	Hash  string `json:"hash"`
+	Value any    `json:"value"`
+}
+
+type CryptoSignInput struct {
+	KeyID  string `json:"key_id"`
+	Values []any  `json:"values"`
+}
+
+type CryptoVerifyInput struct {
+	Signature string `json:"signature"`
+	Value     any    `json:"value"`
+}
 
 type VaultStoreInput struct {
 	VaultID string `json:"vault_id"`
@@ -125,25 +172,207 @@ func (c *Client) request(method string, serverUrl *url.URL, data []byte) (resBod
 		return
 	}
 	defer res.Body.Close()
-	actualDaemonVersion := res.Header.Get("x-kastela-version")
-	if semver.MajorMinor(actualDaemonVersion) == expectedKastelaVersion || actualDaemonVersion == "v0.0.0" {
-		if resBody, err = io.ReadAll(res.Body); err != nil {
+	if resBody, err = io.ReadAll(res.Body); err != nil {
+		return
+	}
+	if res.StatusCode != 200 {
+		var errBody any
+		if err = json.Unmarshal(resBody, &errBody); err != nil {
 			return
 		}
-		if res.StatusCode != 200 {
-			var errBody any
-			if err = json.Unmarshal(resBody, &errBody); err != nil {
-				return
-			}
-			switch v := errBody.(type) {
-			case map[string]any:
-				err = fmt.Errorf(`%s`, v["error"])
-			default:
-				err = fmt.Errorf(`%v`, v)
-			}
+		switch v := errBody.(type) {
+		case map[string]any:
+			err = fmt.Errorf(`%s`, v["error"])
+		default:
+			err = fmt.Errorf(`%v`, v)
 		}
-	} else {
-		err = fmt.Errorf(`kastela server version mismatch, expected: %s.x, actual: %s`, expectedKastelaVersion, actualDaemonVersion)
+	}
+	return
+}
+
+// Encrypt data
+//
+// // sample code
+// ciphertexts, err := client.CryptoEncrypt([]*kastela.CryptoEncryptInput{{KeyID: "your-key-id", Mode: kastela.EncryptionModeAES_GCM, Plaintexts: []any{"foo", "bar"}}})
+func (c *Client) CryptoEncrypt(input []*CryptoEncryptInput) (ciphertexts [][]string, err error) {
+	var reqBody []byte
+	if reqBody, err = json.Marshal(input); err != nil {
+		return
+	}
+	var serverUrl *url.URL
+	if serverUrl, err = url.Parse(fmt.Sprintf(`%s/%s/encrypt`, c.kastelaUrl, cryptoPath)); err != nil {
+		return
+	}
+	var resBody []byte
+	if resBody, err = c.request("POST", serverUrl, reqBody); err != nil {
+		return
+	}
+	var body map[string]any
+	if err = json.Unmarshal(resBody, &body); err != nil {
+		return
+	}
+
+	ciphertextsAny := body["ciphertexts"].([]any)
+	ciphertexts = make([][]string, len(ciphertextsAny))
+	for i, v := range ciphertextsAny {
+		vAny := v.([]any)
+		ciphertexts[i] = make([]string, len(vAny))
+		for j, w := range vAny {
+			ciphertexts[i][j] = w.(string)
+		}
+	}
+	return
+}
+
+// Decrypt data
+//
+// // sample code
+// plaintexts, err := client.CryptoDecrypt([]string{"encrypted-foo", "encrypted-bar"})
+func (c *Client) CryptoDecrypt(input []string) (plaintexts []any, err error) {
+	var reqBody []byte
+	if reqBody, err = json.Marshal(input); err != nil {
+		return
+	}
+	var serverUrl *url.URL
+	if serverUrl, err = url.Parse(fmt.Sprintf(`%s/%s/decrypt`, c.kastelaUrl, cryptoPath)); err != nil {
+		return
+	}
+	var resBody []byte
+	if resBody, err = c.request("POST", serverUrl, reqBody); err != nil {
+		return
+	}
+	var body map[string]any
+	if err = json.Unmarshal(resBody, &body); err != nil {
+		return
+	}
+	plaintextsAny := body["plaintexts"].([]any)
+	plaintexts = make([]any, len(plaintextsAny))
+	for i, v := range plaintextsAny {
+		plaintexts[i] = v.(any)
+	}
+	return
+}
+
+// HMAC data
+//
+// // sample code
+// hashes, err := client.CryptoHMAC([]*kastela.CryptoHMACInput{{KeyID: "your-key-id", Mode: kastela.HashModeBLAKE2B_256, Values: []any{"foo", "bar"}}})
+func (c *Client) CryptoHMAC(input []*CryptoHMACInput) (hashes [][]string, err error) {
+	var reqBody []byte
+	if reqBody, err = json.Marshal(input); err != nil {
+		return
+	}
+	var serverUrl *url.URL
+	if serverUrl, err = url.Parse(fmt.Sprintf(`%s/%s/hmac`, c.kastelaUrl, cryptoPath)); err != nil {
+		return
+	}
+	var resBody []byte
+	if resBody, err = c.request("POST", serverUrl, reqBody); err != nil {
+		return
+	}
+	var body map[string]any
+	if err = json.Unmarshal(resBody, &body); err != nil {
+		return
+	}
+	hashesAny := body["hashes"].([]any)
+	hashes = make([][]string, len(hashesAny))
+	for i, v := range hashesAny {
+		vAny := v.([]any)
+		hashes[i] = make([]string, len(vAny))
+		for j, w := range vAny {
+			hashes[i][j] = w.(string)
+		}
+	}
+	return
+}
+
+// Compare hash and data
+//
+// // sample code
+// result, err := client.CryptoEqual([]*kastela.CryptoEqualInput{{Hash: "your-hash", Value: "raw-value"}})
+func (c *Client) CryptoEqual(input []*CryptoEqualInput) (result []bool, err error) {
+	var reqBody []byte
+	if reqBody, err = json.Marshal(input); err != nil {
+		return
+	}
+	var serverUrl *url.URL
+	if serverUrl, err = url.Parse(fmt.Sprintf(`%s/%s/equal`, c.kastelaUrl, cryptoPath)); err != nil {
+		return
+	}
+	var resBody []byte
+	if resBody, err = c.request("POST", serverUrl, reqBody); err != nil {
+		return
+	}
+	var body map[string]any
+	if err = json.Unmarshal(resBody, &body); err != nil {
+		return
+	}
+	resultAny := body["result"].([]any)
+	result = make([]bool, len(resultAny))
+	for i, v := range resultAny {
+		result[i] = v.(bool)
+	}
+	return
+}
+
+// Sign data
+//
+// // sample code
+// signatures, err := client.CryptoSign([]*kastela.CryptoSignInput{{KeyID: "your-key-id", Values: []any{"foo", "bar"}}})
+func (c *Client) CryptoSign(input []*CryptoSignInput) (signatures [][]string, err error) {
+	var reqBody []byte
+	if reqBody, err = json.Marshal(input); err != nil {
+		return
+	}
+	var serverUrl *url.URL
+	if serverUrl, err = url.Parse(fmt.Sprintf(`%s/%s/sign`, c.kastelaUrl, cryptoPath)); err != nil {
+		return
+	}
+	var resBody []byte
+	if resBody, err = c.request("POST", serverUrl, reqBody); err != nil {
+		return
+	}
+	var body map[string]any
+	if err = json.Unmarshal(resBody, &body); err != nil {
+		return
+	}
+	signaturesAny := body["signatures"].([]any)
+	signatures = make([][]string, len(signaturesAny))
+	for i, v := range signaturesAny {
+		vAny := v.([]any)
+		signatures[i] = make([]string, len(vAny))
+		for j, w := range vAny {
+			signatures[i][j] = w.(string)
+		}
+	}
+	return
+}
+
+// Verify data signature
+//
+// // sample code
+// result, err := client.CryptoVerify([]*kastela.CryptoVerifyInput{{Signature: "your-sign", Value: "raw-value"}})
+func (c *Client) CryptoVerify(input []*CryptoVerifyInput) (result []bool, err error) {
+	var reqBody []byte
+	if reqBody, err = json.Marshal(input); err != nil {
+		return
+	}
+	var serverUrl *url.URL
+	if serverUrl, err = url.Parse(fmt.Sprintf(`%s/%s/verify`, c.kastelaUrl, cryptoPath)); err != nil {
+		return
+	}
+	var resBody []byte
+	if resBody, err = c.request("POST", serverUrl, reqBody); err != nil {
+		return
+	}
+	var body map[string]any
+	if err = json.Unmarshal(resBody, &body); err != nil {
+		return
+	}
+	resultAny := body["result"].([]any)
+	result = make([]bool, len(resultAny))
+	for i, v := range resultAny {
+		result[i] = v.(bool)
 	}
 	return
 }

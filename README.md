@@ -1,8 +1,12 @@
 # Kastela SDK for Go
 
-Credential is required when using the SDK, download it on the entities page.
+## Related Link
 
-Usage Examples :
+- [Packages Link](https://pkg.go.dev/github.com/kastela-sdp/kastela-sdk-go)
+
+## Usage Examples
+
+Credential is required when using the SDK, download it on the entities page.
 
 ```go
 client := kastela.NewClient("https://server.kastela.org", "./ca.crt", "./client.crt", "./client.key")
