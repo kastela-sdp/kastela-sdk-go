@@ -245,11 +245,7 @@ func (c *Client) CryptoDecrypt(input []string) (plaintexts []any, err error) {
 	if err = json.Unmarshal(resBody, &body); err != nil {
 		return
 	}
-	plaintextsAny := body["plaintexts"].([]any)
-	plaintexts = make([]any, len(plaintextsAny))
-	for i, v := range plaintextsAny {
-		plaintexts[i] = v.(any)
-	}
+	plaintexts = body["plaintexts"].([]any)
 	return
 }
 
@@ -601,6 +597,35 @@ func (c *Client) SecureProtectionCommit(credential string) (err error) {
 		return
 	}
 	_, err = c.request("POST", serverUrl, reqBody)
+	return
+}
+
+// Initialize secure vault
+//
+//	// sample code
+//	credential, err := client.SecureVaultInit("WRITE", []string{"your-vault-id"}, 5)
+func (c *Client) SecureVaultInit(operation Operation, vaultIDs []string, ttl int) (credential string, err error) {
+	var reqBody []byte
+	if reqBody, err = json.Marshal(map[string]any{
+		"operation": operation,
+		"vault_ids": vaultIDs,
+		"ttl":       ttl,
+	}); err != nil {
+		return
+	}
+	var serverUrl *url.URL
+	if serverUrl, err = url.Parse(fmt.Sprintf(`%s/%s/vault/init`, c.kastelaUrl, securePath)); err != nil {
+		return
+	}
+	var resBody []byte
+	if resBody, err = c.request("POST", serverUrl, reqBody); err != nil {
+		return
+	}
+	var body map[string]any
+	if err = json.Unmarshal(resBody, &body); err != nil {
+		return
+	}
+	credential = body["credential"].(string)
 	return
 }
 
