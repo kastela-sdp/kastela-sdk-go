@@ -29,23 +29,24 @@ const (
 type EncryptionMode string
 
 const (
-	EncryptionModeAES_GCM            EncryptionMode = "AES_GCM"
-	EncryptionModeCHACHA20_POLY1305  EncryptionMode = "CHACHA20_POLY1305"
-	EncryptionModeXCHACHA20_POLY1305 EncryptionMode = "XCHACHA20_POLY1305"
+	EncryptionModeAESGCM      EncryptionMode = "AES_GCM"
+	EncryptionModeChaChaPoly  EncryptionMode = "CHACHA20_POLY1305"
+	EncryptionModeXChaChaPoly EncryptionMode = "XCHACHA20_POLY1305"
+	EncryptionModeRSAOAEP     EncryptionMode = "RSA_OAEP"
 )
 
 type HashMode string
 
 const (
-	HashModeBLAKE2B_256 HashMode = "BLAKE2B_256"
-	HashModeBLAKE2B_512 HashMode = "BLAKE2B_512"
-	HashModeBLAKE2S_256 HashMode = "BLAKE2S_256"
-	HashModeBLAKE3_256  HashMode = "BLAKE3_256"
-	HashModeBLAKE3_512  HashMode = "BLAKE3_512"
-	HashModeSHA256      HashMode = "SHA256"
-	HashModeSHA512      HashMode = "SHA512"
-	HashModeSHA3_256    HashMode = "SHA3_256"
-	HashModeSHA3_512    HashMode = "SHA3_512"
+	HashModeBlake2b256 HashMode = "BLAKE2B_256"
+	HashModeBlake2b512 HashMode = "BLAKE2B_512"
+	HashModeBlake2s256 HashMode = "BLAKE2S_256"
+	HashModeBlake3256  HashMode = "BLAKE3_256"
+	HashModeBlake3512  HashMode = "BLAKE3_512"
+	HashModeSHA256     HashMode = "SHA256"
+	HashModeSHA512     HashMode = "SHA512"
+	HashModeSHA3256    HashMode = "SHA3_256"
+	HashModeSHA3512    HashMode = "SHA3_512"
 )
 
 type CryptoEncryptInput struct {
