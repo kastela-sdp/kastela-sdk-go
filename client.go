@@ -29,10 +29,10 @@ const (
 type EncryptionMode string
 
 const (
-	EncryptionModeAESGCM      EncryptionMode = "AES_GCM"
-	EncryptionModeChaChaPoly  EncryptionMode = "CHACHA20_POLY1305"
-	EncryptionModeXChaChaPoly EncryptionMode = "XCHACHA20_POLY1305"
-	EncryptionModeRSAOAEP     EncryptionMode = "RSA_OAEP"
+	EncryptionModeAESGCM            EncryptionMode = "AES_GCM"
+	EncryptionModeChaCha20Poly1305  EncryptionMode = "CHACHA20_POLY1305"
+	EncryptionModeXChaCha20Poly1305 EncryptionMode = "XCHACHA20_POLY1305"
+	EncryptionModeRSAOAEP           EncryptionMode = "RSA_OAEP"
 )
 
 type HashMode string
