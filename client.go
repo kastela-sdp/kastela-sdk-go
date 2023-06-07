@@ -88,6 +88,11 @@ type VaultFetchInput struct {
 	After   string `json:"after"`
 }
 
+type VaultCountInput struct {
+	VaultID string `json:"vault_id"`
+	Search  any    `json:"search"`
+}
+
 type VaultGetInput struct {
 	VaultID string   `json:"vault_id"`
 	Tokens  []string `json:"tokens"`
@@ -116,6 +121,16 @@ type ProtectionSealInput struct {
 type ProtectionOpenInput struct {
 	ProtectionID string `json:"protection_id"`
 	Tokens       []any  `json:"tokens"`
+}
+
+type ProtectionFetchInput struct {
+	ProtectionID string `json:"protection_id"`
+	Search       any    `json:"search"`
+}
+
+type ProtectionCountInput struct {
+	ProtectionID string `json:"protection_id"`
+	Search       any    `json:"search"`
 }
 
 type PrivacyProxyCommon struct {
@@ -377,7 +392,7 @@ func (c *Client) CryptoVerify(input []*CryptoVerifyInput) (result []bool, err er
 // Store vault data
 //
 //	// sample code
-//	tokens, err = client.VaultStore([]*kastela.VaultStoreInput{{VaultID: "your-vault-id", Values: []any{ "foo", 1 }}})
+//	tokens, err := client.VaultStore([]*kastela.VaultStoreInput{{VaultID: "your-vault-id", Values: []any{ "foo", 1 }}})
 func (c *Client) VaultStore(input []*VaultStoreInput) (tokens [][]string, err error) {
 	var reqBody []byte
 	if reqBody, err = json.Marshal(input); err != nil {
@@ -407,10 +422,10 @@ func (c *Client) VaultStore(input []*VaultStoreInput) (tokens [][]string, err er
 	return
 }
 
-// Search vault data by indexed column
+// Fetch vault data
 //
 //	// sample code
-//	tokens, err = client.VaultFetch(&VaultFetchInput{VaultID: "your-vault-id", Search: "foo", Size: 10, After: "bar"})
+//	tokens, err := client.VaultFetch(&VaultFetchInput{VaultID: "your-vault-id", Search: "foo", Size: 10, After: "bar"})
 func (c *Client) VaultFetch(input *VaultFetchInput) (tokens []string, err error) {
 	body := map[string]any{
 		"vault_id": input.VaultID,
@@ -445,10 +460,38 @@ func (c *Client) VaultFetch(input *VaultFetchInput) (tokens []string, err error)
 	return
 }
 
+// Count vault data
+//
+//	// sample code
+//	count, err := client.VaultCount(&VaultCountInput{VaultID: "your-vault-id", Search: "foo"})
+func (c *Client) VaultCount(input *VaultCountInput) (count uint64, err error) {
+	body := map[string]any{
+		"vault_id": input.VaultID,
+		"search":   input.Search,
+	}
+	var reqBody []byte
+	if reqBody, err = json.Marshal(body); err != nil {
+		return
+	}
+	var serverUrl *url.URL
+	if serverUrl, err = url.Parse(fmt.Sprintf(`%s/%s/count`, c.kastelaUrl, vaultPath)); err != nil {
+		return
+	}
+	var resBody []byte
+	if resBody, err = c.request("POST", serverUrl, reqBody); err != nil {
+		return
+	}
+	if err = json.Unmarshal(resBody, &body); err != nil {
+		return
+	}
+	count = uint64(body["count"].(float64))
+	return
+}
+
 // Get vault data
 //
 //	// sample code
-//	values, err = client.VaultGet([]*VaultGetInput{{VaultID: "your-vault-id", Tokens: []string{ "foo", "bar"}}})
+//	values, err := client.VaultGet([]*VaultGetInput{{VaultID: "your-vault-id", Tokens: []string{ "foo", "bar"}}})
 func (c *Client) VaultGet(input []*VaultGetInput) (values [][]any, err error) {
 	var reqBody []byte
 	if reqBody, err = json.Marshal(input); err != nil {
@@ -477,7 +520,7 @@ func (c *Client) VaultGet(input []*VaultGetInput) (values [][]any, err error) {
 // Update vault data
 //
 //	// sample code
-//	err = client.VaultUpdate([]*VaultUpdateInput{{VaultID: "your-vault-id", Values: []*VaultUpdateInputValue{{Token: "foo", Value: 123456}}}})
+//	err := client.VaultUpdate([]*VaultUpdateInput{{VaultID: "your-vault-id", Values: []*VaultUpdateInputValue{{Token: "foo", Value: 123456}}}})
 func (c *Client) VaultUpdate(input []*VaultUpdateInput) (err error) {
 	var reqBody []byte
 	if reqBody, err = json.Marshal(input); err != nil {
@@ -494,7 +537,7 @@ func (c *Client) VaultUpdate(input []*VaultUpdateInput) (err error) {
 // Remove vault data
 //
 //	// sample code
-//	err = client.VaultDelete([]*VaultDeleteInput{{VaultID: "your-vault-id", Tokens: []string{"foo", "bar"}}})
+//	err := client.VaultDelete([]*VaultDeleteInput{{VaultID: "your-vault-id", Tokens: []string{"foo", "bar"}}})
 func (c *Client) VaultDelete(input []*VaultDeleteInput) (err error) {
 	var reqBody []byte
 	if reqBody, err = json.Marshal(input); err != nil {
@@ -511,7 +554,7 @@ func (c *Client) VaultDelete(input []*VaultDeleteInput) (err error) {
 // Encrypt data protection
 //
 //	// sample code
-//	err := client.protectionSeal([]*ProtectionSealInput{ProtectionID: "your-protection-id", PrimaryKeys: []any{1, 2, 3}})
+//	err := client.ProtectionSeal([]*ProtectionSealInput{{ProtectionID: "your-protection-id", PrimaryKeys: []any{1, 2, 3}}})
 func (c *Client) ProtectionSeal(input []*ProtectionSealInput) (err error) {
 	var reqBody []byte
 	if reqBody, err = json.Marshal(input); err != nil {
@@ -528,7 +571,7 @@ func (c *Client) ProtectionSeal(input []*ProtectionSealInput) (err error) {
 // Decrypt data protection
 //
 //	// sample code
-//	values, err := client.protectionOpen([]*ProtectionOpenInput{ProtectionID: "your-protection-id", Tokens: []any{ "foo", "bar", "baz" }})
+//	values, err := client.ProtectionOpen([]*ProtectionOpenInput{{ProtectionID: "your-protection-id", Tokens: []any{ "foo", "bar", "baz" }}})
 func (c *Client) ProtectionOpen(input []*ProtectionOpenInput) (values [][]any, err error) {
 	var reqBody []byte
 	if reqBody, err = json.Marshal(input); err != nil {
@@ -550,6 +593,56 @@ func (c *Client) ProtectionOpen(input []*ProtectionOpenInput) (values [][]any, e
 	for _, v := range body["values"].([]any) {
 		values = append(values, v.([]any))
 	}
+	return
+}
+
+// Fetch data protection
+//
+//	// sample code
+//	primaryKeys, err := client.ProtectionFetch([]*ProtectionFetchInput{ProtectionID: "your-protection-id", Search: "foo"})
+func (c *Client) ProtectionFetch(input []*ProtectionFetchInput) (primaryKeys []any, err error) {
+	var reqBody []byte
+	if reqBody, err = json.Marshal(input); err != nil {
+		return
+	}
+	var serverUrl *url.URL
+	if serverUrl, err = url.Parse(fmt.Sprintf(`%s/%s/fetch`, c.kastelaUrl, protectionPath)); err != nil {
+		return
+	}
+	var resBody []byte
+	if resBody, err = c.request("POST", serverUrl, reqBody); err != nil {
+		return
+	}
+	var body map[string]any
+	if err = json.Unmarshal(resBody, &body); err != nil {
+		return
+	}
+	primaryKeys = body["primary_keys"].([]any)
+	return
+}
+
+// Count data protection
+//
+//	// sample code
+//	count, err := client.ProtectionCount([]*ProtectionCountInput{ProtectionID: "your-protection-id", Search: "foo"})
+func (c *Client) ProtectionCount(input []*ProtectionCountInput) (count uint64, err error) {
+	var reqBody []byte
+	if reqBody, err = json.Marshal(input); err != nil {
+		return
+	}
+	var serverUrl *url.URL
+	if serverUrl, err = url.Parse(fmt.Sprintf(`%s/%s/count`, c.kastelaUrl, protectionPath)); err != nil {
+		return
+	}
+	var resBody []byte
+	if resBody, err = c.request("POST", serverUrl, reqBody); err != nil {
+		return
+	}
+	var body map[string]any
+	if err = json.Unmarshal(resBody, &body); err != nil {
+		return
+	}
+	count = uint64(body["count"].(float64))
 	return
 }
 

@@ -1,20 +1,38 @@
 # Kastela SDK for Go
 
-## Related Link
+[![Go Reference](https://pkg.go.dev/badge/github.com/kastela-sdp/kastela-sdk-go.svg)](https://pkg.go.dev/github.com/kastela-sdp/kastela-sdk-go)
 
-- [Packages Link](https://pkg.go.dev/github.com/kastela-sdp/kastela-sdk-go)
+## Installation
 
-## Usage Examples
+```bash
+go get github.com/kastela-sdp/kastela-sdk-go
+```
 
-Credential is required when using the SDK, download it on the entities page.
+## Usage
 
 ```go
-client := kastela.NewClient("https://server.kastela.org", "./ca.crt", "./client.crt", "./client.key")
+package main
 
-data, err := client.protectionOpen([]*ProtectionOpenInput{ProtectionId: "your-protection-id", Tokens: []any{a, b, c, d, e}})
-if err != nil {
-  log.Fatalln(err)
+import (
+  "fmt"
+  "log"
+
+  "github.com/kastela-sdp/kastela-sdk-go"
+)
+
+func main() {
+  client := kastela.NewClient("https://127.0.0.1:3100", "./ca.crt", "./client.crt", "./client.key")
+  
+  data, err := client.ProtectionOpen([]*kastela.ProtectionOpenInput{
+    {
+      ProtectionID: "your-protection-id",
+      Tokens: []any{"foo", "bar", "baz"},
+    },
+  })
+  if err != nil {
+    log.Fatalln(err)
+  }
+  
+  fmt.Println(data)
 }
-
-fmt.Println("data", data)
 ```
