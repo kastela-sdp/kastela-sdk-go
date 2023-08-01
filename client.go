@@ -113,6 +113,11 @@ type VaultDeleteInput struct {
 	Tokens  []string `json:"tokens"`
 }
 
+type ProtectionTokenInput struct {
+	ProtectionID string `json:"protection_id"`
+	Values       []any  `json:"values"`
+}
+
 type ProtectionSealInput struct {
 	ProtectionID string `json:"protection_id"`
 	PrimaryKeys  []any  `json:"primary_keys"`
@@ -147,12 +152,12 @@ type PrivacyProxyOptions struct {
 }
 
 type Client struct {
-	kastelaUrl string
+	kastelaURL string
 	client     *http.Client
 }
 
 // Create a new Kastela Client instance for communicating with the server. Require server information and return client instance.
-func NewClient(kastelaUrl, caCertPath, clientCertPath, clientKeyPath string) *Client {
+func NewClient(kastelaURL, caCertPath, clientCertPath, clientKeyPath string) *Client {
 	var err error
 	var caCert []byte
 	if caCert, err = os.ReadFile(caCertPath); err != nil {
@@ -165,7 +170,7 @@ func NewClient(kastelaUrl, caCertPath, clientCertPath, clientKeyPath string) *Cl
 		log.Fatalln(err)
 	}
 	return &Client{
-		kastelaUrl: kastelaUrl,
+		kastelaURL: kastelaURL,
 		client: &http.Client{
 			Transport: &http.Transport{
 				TLSClientConfig: &tls.Config{
@@ -177,10 +182,10 @@ func NewClient(kastelaUrl, caCertPath, clientCertPath, clientKeyPath string) *Cl
 	}
 }
 
-func (c *Client) request(method string, serverUrl *url.URL, data []byte) (resBody []byte, err error) {
+func (c *Client) request(method string, serverURL *url.URL, data []byte) (resBody []byte, err error) {
 	reqBody := bytes.NewBuffer(data)
 	var req *http.Request
-	if req, err = http.NewRequest(method, serverUrl.String(), reqBody); err != nil {
+	if req, err = http.NewRequest(method, serverURL.String(), reqBody); err != nil {
 		return
 	}
 	var res *http.Response
@@ -215,12 +220,12 @@ func (c *Client) CryptoEncrypt(input []*CryptoEncryptInput) (ciphertexts [][]str
 	if reqBody, err = json.Marshal(input); err != nil {
 		return
 	}
-	var serverUrl *url.URL
-	if serverUrl, err = url.Parse(fmt.Sprintf(`%s/%s/encrypt`, c.kastelaUrl, cryptoPath)); err != nil {
+	var serverURL *url.URL
+	if serverURL, err = url.Parse(fmt.Sprintf(`%s/%s/encrypt`, c.kastelaURL, cryptoPath)); err != nil {
 		return
 	}
 	var resBody []byte
-	if resBody, err = c.request("POST", serverUrl, reqBody); err != nil {
+	if resBody, err = c.request("POST", serverURL, reqBody); err != nil {
 		return
 	}
 	var body map[string]any
@@ -249,12 +254,12 @@ func (c *Client) CryptoDecrypt(input []string) (plaintexts []any, err error) {
 	if reqBody, err = json.Marshal(input); err != nil {
 		return
 	}
-	var serverUrl *url.URL
-	if serverUrl, err = url.Parse(fmt.Sprintf(`%s/%s/decrypt`, c.kastelaUrl, cryptoPath)); err != nil {
+	var serverURL *url.URL
+	if serverURL, err = url.Parse(fmt.Sprintf(`%s/%s/decrypt`, c.kastelaURL, cryptoPath)); err != nil {
 		return
 	}
 	var resBody []byte
-	if resBody, err = c.request("POST", serverUrl, reqBody); err != nil {
+	if resBody, err = c.request("POST", serverURL, reqBody); err != nil {
 		return
 	}
 	var body map[string]any
@@ -274,12 +279,12 @@ func (c *Client) CryptoHMAC(input []*CryptoHMACInput) (hashes [][]string, err er
 	if reqBody, err = json.Marshal(input); err != nil {
 		return
 	}
-	var serverUrl *url.URL
-	if serverUrl, err = url.Parse(fmt.Sprintf(`%s/%s/hmac`, c.kastelaUrl, cryptoPath)); err != nil {
+	var serverURL *url.URL
+	if serverURL, err = url.Parse(fmt.Sprintf(`%s/%s/hmac`, c.kastelaURL, cryptoPath)); err != nil {
 		return
 	}
 	var resBody []byte
-	if resBody, err = c.request("POST", serverUrl, reqBody); err != nil {
+	if resBody, err = c.request("POST", serverURL, reqBody); err != nil {
 		return
 	}
 	var body map[string]any
@@ -307,12 +312,12 @@ func (c *Client) CryptoEqual(input []*CryptoEqualInput) (result []bool, err erro
 	if reqBody, err = json.Marshal(input); err != nil {
 		return
 	}
-	var serverUrl *url.URL
-	if serverUrl, err = url.Parse(fmt.Sprintf(`%s/%s/equal`, c.kastelaUrl, cryptoPath)); err != nil {
+	var serverURL *url.URL
+	if serverURL, err = url.Parse(fmt.Sprintf(`%s/%s/equal`, c.kastelaURL, cryptoPath)); err != nil {
 		return
 	}
 	var resBody []byte
-	if resBody, err = c.request("POST", serverUrl, reqBody); err != nil {
+	if resBody, err = c.request("POST", serverURL, reqBody); err != nil {
 		return
 	}
 	var body map[string]any
@@ -336,12 +341,12 @@ func (c *Client) CryptoSign(input []*CryptoSignInput) (signatures [][]string, er
 	if reqBody, err = json.Marshal(input); err != nil {
 		return
 	}
-	var serverUrl *url.URL
-	if serverUrl, err = url.Parse(fmt.Sprintf(`%s/%s/sign`, c.kastelaUrl, cryptoPath)); err != nil {
+	var serverURL *url.URL
+	if serverURL, err = url.Parse(fmt.Sprintf(`%s/%s/sign`, c.kastelaURL, cryptoPath)); err != nil {
 		return
 	}
 	var resBody []byte
-	if resBody, err = c.request("POST", serverUrl, reqBody); err != nil {
+	if resBody, err = c.request("POST", serverURL, reqBody); err != nil {
 		return
 	}
 	var body map[string]any
@@ -369,12 +374,12 @@ func (c *Client) CryptoVerify(input []*CryptoVerifyInput) (result []bool, err er
 	if reqBody, err = json.Marshal(input); err != nil {
 		return
 	}
-	var serverUrl *url.URL
-	if serverUrl, err = url.Parse(fmt.Sprintf(`%s/%s/verify`, c.kastelaUrl, cryptoPath)); err != nil {
+	var serverURL *url.URL
+	if serverURL, err = url.Parse(fmt.Sprintf(`%s/%s/verify`, c.kastelaURL, cryptoPath)); err != nil {
 		return
 	}
 	var resBody []byte
-	if resBody, err = c.request("POST", serverUrl, reqBody); err != nil {
+	if resBody, err = c.request("POST", serverURL, reqBody); err != nil {
 		return
 	}
 	var body map[string]any
@@ -398,12 +403,12 @@ func (c *Client) VaultStore(input []*VaultStoreInput) (tokens [][]string, err er
 	if reqBody, err = json.Marshal(input); err != nil {
 		return
 	}
-	var serverUrl *url.URL
-	if serverUrl, err = url.Parse(fmt.Sprintf(`%s/%s/store`, c.kastelaUrl, vaultPath)); err != nil {
+	var serverURL *url.URL
+	if serverURL, err = url.Parse(fmt.Sprintf(`%s/%s/store`, c.kastelaURL, vaultPath)); err != nil {
 		return
 	}
 	var resBody []byte
-	if resBody, err = c.request("POST", serverUrl, reqBody); err != nil {
+	if resBody, err = c.request("POST", serverURL, reqBody); err != nil {
 		return
 	}
 	var body map[string]any
@@ -441,12 +446,12 @@ func (c *Client) VaultFetch(input *VaultFetchInput) (tokens []string, err error)
 	if reqBody, err = json.Marshal(body); err != nil {
 		return
 	}
-	var serverUrl *url.URL
-	if serverUrl, err = url.Parse(fmt.Sprintf(`%s/%s/fetch`, c.kastelaUrl, vaultPath)); err != nil {
+	var serverURL *url.URL
+	if serverURL, err = url.Parse(fmt.Sprintf(`%s/%s/fetch`, c.kastelaURL, vaultPath)); err != nil {
 		return
 	}
 	var resBody []byte
-	if resBody, err = c.request("POST", serverUrl, reqBody); err != nil {
+	if resBody, err = c.request("POST", serverURL, reqBody); err != nil {
 		return
 	}
 	if err = json.Unmarshal(resBody, &body); err != nil {
@@ -473,12 +478,12 @@ func (c *Client) VaultCount(input *VaultCountInput) (count uint64, err error) {
 	if reqBody, err = json.Marshal(body); err != nil {
 		return
 	}
-	var serverUrl *url.URL
-	if serverUrl, err = url.Parse(fmt.Sprintf(`%s/%s/count`, c.kastelaUrl, vaultPath)); err != nil {
+	var serverURL *url.URL
+	if serverURL, err = url.Parse(fmt.Sprintf(`%s/%s/count`, c.kastelaURL, vaultPath)); err != nil {
 		return
 	}
 	var resBody []byte
-	if resBody, err = c.request("POST", serverUrl, reqBody); err != nil {
+	if resBody, err = c.request("POST", serverURL, reqBody); err != nil {
 		return
 	}
 	if err = json.Unmarshal(resBody, &body); err != nil {
@@ -497,12 +502,12 @@ func (c *Client) VaultGet(input []*VaultGetInput) (values [][]any, err error) {
 	if reqBody, err = json.Marshal(input); err != nil {
 		return
 	}
-	var serverUrl *url.URL
-	if serverUrl, err = url.Parse(fmt.Sprintf(`%s/%s/get`, c.kastelaUrl, vaultPath)); err != nil {
+	var serverURL *url.URL
+	if serverURL, err = url.Parse(fmt.Sprintf(`%s/%s/get`, c.kastelaURL, vaultPath)); err != nil {
 		return
 	}
 	var resBody []byte
-	if resBody, err = c.request("POST", serverUrl, reqBody); err != nil {
+	if resBody, err = c.request("POST", serverURL, reqBody); err != nil {
 		return
 	}
 	var body map[string]any
@@ -526,11 +531,11 @@ func (c *Client) VaultUpdate(input []*VaultUpdateInput) (err error) {
 	if reqBody, err = json.Marshal(input); err != nil {
 		return
 	}
-	var serverUrl *url.URL
-	if serverUrl, err = url.Parse(fmt.Sprintf(`%s/%s/update`, c.kastelaUrl, vaultPath)); err != nil {
+	var serverURL *url.URL
+	if serverURL, err = url.Parse(fmt.Sprintf(`%s/%s/update`, c.kastelaURL, vaultPath)); err != nil {
 		return
 	}
-	_, err = c.request("POST", serverUrl, reqBody)
+	_, err = c.request("POST", serverURL, reqBody)
 	return
 }
 
@@ -543,11 +548,39 @@ func (c *Client) VaultDelete(input []*VaultDeleteInput) (err error) {
 	if reqBody, err = json.Marshal(input); err != nil {
 		return
 	}
-	var serverUrl *url.URL
-	if serverUrl, err = url.Parse(fmt.Sprintf(`%s/%s/delete`, c.kastelaUrl, vaultPath)); err != nil {
+	var serverURL *url.URL
+	if serverURL, err = url.Parse(fmt.Sprintf(`%s/%s/delete`, c.kastelaURL, vaultPath)); err != nil {
 		return
 	}
-	_, err = c.request("POST", serverUrl, reqBody)
+	_, err = c.request("POST", serverURL, reqBody)
+	return
+}
+
+// Generate token for protection
+//
+//	// sample code
+//	err := client.ProtectionToken([]*ProtectionTokenInput{{ProtectionID: "your-protection-id", Values: []any{"foo", "bar", "baz"}}})
+func (c *Client) ProtectionToken(input []*ProtectionTokenInput) (tokens [][]any, err error) {
+	var reqBody []byte
+	if reqBody, err = json.Marshal(input); err != nil {
+		return
+	}
+	var serverURL *url.URL
+	if serverURL, err = url.Parse(fmt.Sprintf(`%s/%s/token`, c.kastelaURL, protectionPath)); err != nil {
+		return
+	}
+	var resBody []byte
+	if resBody, err = c.request("POST", serverURL, reqBody); err != nil {
+		return
+	}
+	var body map[string]any
+	if err = json.Unmarshal(resBody, &body); err != nil {
+		return
+	}
+	tokens = [][]any{}
+	for _, v := range body["tokens"].([]any) {
+		tokens = append(tokens, v.([]any))
+	}
 	return
 }
 
@@ -560,11 +593,11 @@ func (c *Client) ProtectionSeal(input []*ProtectionSealInput) (err error) {
 	if reqBody, err = json.Marshal(input); err != nil {
 		return
 	}
-	var serverUrl *url.URL
-	if serverUrl, err = url.Parse(fmt.Sprintf(`%s/%s/seal`, c.kastelaUrl, protectionPath)); err != nil {
+	var serverURL *url.URL
+	if serverURL, err = url.Parse(fmt.Sprintf(`%s/%s/seal`, c.kastelaURL, protectionPath)); err != nil {
 		return
 	}
-	_, err = c.request("POST", serverUrl, reqBody)
+	_, err = c.request("POST", serverURL, reqBody)
 	return
 }
 
@@ -577,12 +610,12 @@ func (c *Client) ProtectionOpen(input []*ProtectionOpenInput) (values [][]any, e
 	if reqBody, err = json.Marshal(input); err != nil {
 		return
 	}
-	var serverUrl *url.URL
-	if serverUrl, err = url.Parse(fmt.Sprintf(`%s/%s/open`, c.kastelaUrl, protectionPath)); err != nil {
+	var serverURL *url.URL
+	if serverURL, err = url.Parse(fmt.Sprintf(`%s/%s/open`, c.kastelaURL, protectionPath)); err != nil {
 		return
 	}
 	var resBody []byte
-	if resBody, err = c.request("POST", serverUrl, reqBody); err != nil {
+	if resBody, err = c.request("POST", serverURL, reqBody); err != nil {
 		return
 	}
 	var body map[string]any
@@ -605,12 +638,12 @@ func (c *Client) ProtectionFetch(input []*ProtectionFetchInput) (primaryKeys []a
 	if reqBody, err = json.Marshal(input); err != nil {
 		return
 	}
-	var serverUrl *url.URL
-	if serverUrl, err = url.Parse(fmt.Sprintf(`%s/%s/fetch`, c.kastelaUrl, protectionPath)); err != nil {
+	var serverURL *url.URL
+	if serverURL, err = url.Parse(fmt.Sprintf(`%s/%s/fetch`, c.kastelaURL, protectionPath)); err != nil {
 		return
 	}
 	var resBody []byte
-	if resBody, err = c.request("POST", serverUrl, reqBody); err != nil {
+	if resBody, err = c.request("POST", serverURL, reqBody); err != nil {
 		return
 	}
 	var body map[string]any
@@ -630,12 +663,12 @@ func (c *Client) ProtectionCount(input []*ProtectionCountInput) (count uint64, e
 	if reqBody, err = json.Marshal(input); err != nil {
 		return
 	}
-	var serverUrl *url.URL
-	if serverUrl, err = url.Parse(fmt.Sprintf(`%s/%s/count`, c.kastelaUrl, protectionPath)); err != nil {
+	var serverURL *url.URL
+	if serverURL, err = url.Parse(fmt.Sprintf(`%s/%s/count`, c.kastelaURL, protectionPath)); err != nil {
 		return
 	}
 	var resBody []byte
-	if resBody, err = c.request("POST", serverUrl, reqBody); err != nil {
+	if resBody, err = c.request("POST", serverURL, reqBody); err != nil {
 		return
 	}
 	var body map[string]any
@@ -659,12 +692,12 @@ func (c *Client) SecureProtectionInit(operation Operation, protectionIDs []strin
 	}); err != nil {
 		return
 	}
-	var serverUrl *url.URL
-	if serverUrl, err = url.Parse(fmt.Sprintf(`%s/%s/protection/init`, c.kastelaUrl, securePath)); err != nil {
+	var serverURL *url.URL
+	if serverURL, err = url.Parse(fmt.Sprintf(`%s/%s/protection/init`, c.kastelaURL, securePath)); err != nil {
 		return
 	}
 	var resBody []byte
-	if resBody, err = c.request("POST", serverUrl, reqBody); err != nil {
+	if resBody, err = c.request("POST", serverURL, reqBody); err != nil {
 		return
 	}
 	var body map[string]any
@@ -686,11 +719,11 @@ func (c *Client) SecureProtectionCommit(credential string) (err error) {
 	}); err != nil {
 		return
 	}
-	var serverUrl *url.URL
-	if serverUrl, err = url.Parse(fmt.Sprintf(`%s/%s/protection/commit`, c.kastelaUrl, securePath)); err != nil {
+	var serverURL *url.URL
+	if serverURL, err = url.Parse(fmt.Sprintf(`%s/%s/protection/commit`, c.kastelaURL, securePath)); err != nil {
 		return
 	}
-	_, err = c.request("POST", serverUrl, reqBody)
+	_, err = c.request("POST", serverURL, reqBody)
 	return
 }
 
@@ -707,12 +740,12 @@ func (c *Client) SecureVaultInit(operation Operation, vaultIDs []string, ttl int
 	}); err != nil {
 		return
 	}
-	var serverUrl *url.URL
-	if serverUrl, err = url.Parse(fmt.Sprintf(`%s/%s/vault/init`, c.kastelaUrl, securePath)); err != nil {
+	var serverURL *url.URL
+	if serverURL, err = url.Parse(fmt.Sprintf(`%s/%s/vault/init`, c.kastelaURL, securePath)); err != nil {
 		return
 	}
 	var resBody []byte
-	if resBody, err = c.request("POST", serverUrl, reqBody); err != nil {
+	if resBody, err = c.request("POST", serverURL, reqBody); err != nil {
 		return
 	}
 	var body map[string]any
@@ -754,23 +787,23 @@ func (c *Client) SecureVaultInit(operation Operation, vaultIDs []string, ttl int
 //	        "_email": "1",
 //	    },
 //	})
-func (c *Client) PrivacyProxyRequest(bodyType string, targetUrl string, method string, common PrivacyProxyCommon, options *PrivacyProxyOptions) (response any, err error) {
+func (c *Client) PrivacyProxyRequest(bodyType string, targetURL string, method string, common PrivacyProxyCommon, options *PrivacyProxyOptions) (response any, err error) {
 	var reqBody []byte
 	if reqBody, err = json.Marshal(map[string]any{
 		"type":    bodyType,
-		"url":     targetUrl,
+		"url":     targetURL,
 		"method":  method,
 		"common":  common,
 		"options": options,
 	}); err != nil {
 		return
 	}
-	var serverUrl *url.URL
-	if serverUrl, err = url.Parse(fmt.Sprintf(`%s/%s`, c.kastelaUrl, privacyProxyPath)); err != nil {
+	var serverURL *url.URL
+	if serverURL, err = url.Parse(fmt.Sprintf(`%s/%s`, c.kastelaURL, privacyProxyPath)); err != nil {
 		return
 	}
 	var resBody []byte
-	if resBody, err = c.request("POST", serverUrl, reqBody); err != nil {
+	if resBody, err = c.request("POST", serverURL, reqBody); err != nil {
 		return
 	}
 	var body map[string]any
