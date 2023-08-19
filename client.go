@@ -113,7 +113,7 @@ type VaultDeleteInput struct {
 	Tokens  []string `json:"tokens"`
 }
 
-type ProtectionTokenInput struct {
+type ProtectionTokenizeInput struct {
 	ProtectionID string `json:"protection_id"`
 	Values       []any  `json:"values"`
 }
@@ -556,17 +556,17 @@ func (c *Client) VaultDelete(input []*VaultDeleteInput) (err error) {
 	return
 }
 
-// Generate token for protection
+// Tokenize data for protection
 //
 //	// sample code
-//	err := client.ProtectionToken([]*ProtectionTokenInput{{ProtectionID: "your-protection-id", Values: []any{"foo", "bar", "baz"}}})
-func (c *Client) ProtectionToken(input []*ProtectionTokenInput) (tokens [][]any, err error) {
+//	err := client.ProtectionTokenize([]*ProtectionTokenizeInput{{ProtectionID: "your-protection-id", Values: []any{"foo", "bar", "baz"}}})
+func (c *Client) ProtectionTokenize(input []*ProtectionTokenizeInput) (tokens [][]any, err error) {
 	var reqBody []byte
 	if reqBody, err = json.Marshal(input); err != nil {
 		return
 	}
 	var serverURL *url.URL
-	if serverURL, err = url.Parse(fmt.Sprintf(`%s/%s/token`, c.kastelaURL, protectionPath)); err != nil {
+	if serverURL, err = url.Parse(fmt.Sprintf(`%s/%s/tokenize`, c.kastelaURL, protectionPath)); err != nil {
 		return
 	}
 	var resBody []byte
