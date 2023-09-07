@@ -632,8 +632,8 @@ func (c *Client) ProtectionOpen(input []*ProtectionOpenInput) (values [][]any, e
 // Fetch data protection
 //
 //	// sample code
-//	primaryKeys, err := client.ProtectionFetch([]*ProtectionFetchInput{ProtectionID: "your-protection-id", Search: "foo"})
-func (c *Client) ProtectionFetch(input []*ProtectionFetchInput) (primaryKeys []any, err error) {
+//	primaryKeys, err := client.ProtectionFetch(&ProtectionFetchInput{ProtectionID: "your-protection-id", Search: "foo"})
+func (c *Client) ProtectionFetch(input *ProtectionFetchInput) (primaryKeys []any, err error) {
 	var reqBody []byte
 	if reqBody, err = json.Marshal(input); err != nil {
 		return
