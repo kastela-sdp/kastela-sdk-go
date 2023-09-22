@@ -10,7 +10,6 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-	"os"
 )
 
 const vaultPath string = "api/vault"
@@ -157,16 +156,12 @@ type Client struct {
 }
 
 // Create a new Kastela Client instance for communicating with the server. Require server information and return client instance.
-func NewClient(kastelaURL, caCertPath, clientCertPath, clientKeyPath string) *Client {
+func NewClient(kastelaURL string, caCert, clientCert, clientKey []byte) *Client {
 	var err error
-	var caCert []byte
-	if caCert, err = os.ReadFile(caCertPath); err != nil {
-		log.Fatalln(err)
-	}
 	certPool := x509.NewCertPool()
 	certPool.AppendCertsFromPEM(caCert)
 	var tlsCert tls.Certificate
-	if tlsCert, err = tls.LoadX509KeyPair(clientCertPath, clientKeyPath); err != nil {
+	if tlsCert, err = tls.X509KeyPair(clientCert, clientKey); err != nil {
 		log.Fatalln(err)
 	}
 	return &Client{
@@ -213,8 +208,8 @@ func (c *Client) request(method string, serverURL *url.URL, data []byte) (resBod
 
 // Encrypt data
 //
-// // sample code
-// ciphertexts, err := client.CryptoEncrypt([]*kastela.CryptoEncryptInput{{KeyID: "your-key-id", Mode: kastela.EncryptionModeAES_GCM, Plaintexts: []any{"foo", "bar"}}})
+//	// sample code
+//	ciphertexts, err := client.CryptoEncrypt([]*kastela.CryptoEncryptInput{{KeyID: "your-key-id", Mode: kastela.EncryptionModeAES_GCM, Plaintexts: []any{"foo", "bar"}}})
 func (c *Client) CryptoEncrypt(input []*CryptoEncryptInput) (ciphertexts [][]string, err error) {
 	var reqBody []byte
 	if reqBody, err = json.Marshal(input); err != nil {
@@ -247,8 +242,8 @@ func (c *Client) CryptoEncrypt(input []*CryptoEncryptInput) (ciphertexts [][]str
 
 // Decrypt data
 //
-// // sample code
-// plaintexts, err := client.CryptoDecrypt([]string{"encrypted-foo", "encrypted-bar"})
+//	// sample code
+//	plaintexts, err := client.CryptoDecrypt([]string{"encrypted-foo", "encrypted-bar"})
 func (c *Client) CryptoDecrypt(input []string) (plaintexts []any, err error) {
 	var reqBody []byte
 	if reqBody, err = json.Marshal(input); err != nil {
@@ -272,8 +267,8 @@ func (c *Client) CryptoDecrypt(input []string) (plaintexts []any, err error) {
 
 // HMAC data
 //
-// // sample code
-// hashes, err := client.CryptoHMAC([]*kastela.CryptoHMACInput{{KeyID: "your-key-id", Mode: kastela.HashModeBLAKE2B_256, Values: []any{"foo", "bar"}}})
+//	// sample code
+//	hashes, err := client.CryptoHMAC([]*kastela.CryptoHMACInput{{KeyID: "your-key-id", Mode: kastela.HashModeBLAKE2B_256, Values: []any{"foo", "bar"}}})
 func (c *Client) CryptoHMAC(input []*CryptoHMACInput) (hashes [][]string, err error) {
 	var reqBody []byte
 	if reqBody, err = json.Marshal(input); err != nil {
@@ -305,8 +300,8 @@ func (c *Client) CryptoHMAC(input []*CryptoHMACInput) (hashes [][]string, err er
 
 // Compare hash and data
 //
-// // sample code
-// result, err := client.CryptoEqual([]*kastela.CryptoEqualInput{{Hash: "your-hash", Value: "raw-value"}})
+//	// sample code
+//	result, err := client.CryptoEqual([]*kastela.CryptoEqualInput{{Hash: "your-hash", Value: "raw-value"}})
 func (c *Client) CryptoEqual(input []*CryptoEqualInput) (result []bool, err error) {
 	var reqBody []byte
 	if reqBody, err = json.Marshal(input); err != nil {
@@ -334,8 +329,8 @@ func (c *Client) CryptoEqual(input []*CryptoEqualInput) (result []bool, err erro
 
 // Sign data
 //
-// // sample code
-// signatures, err := client.CryptoSign([]*kastela.CryptoSignInput{{KeyID: "your-key-id", Values: []any{"foo", "bar"}}})
+//	// sample code
+//	signatures, err := client.CryptoSign([]*kastela.CryptoSignInput{{KeyID: "your-key-id", Values: []any{"foo", "bar"}}})
 func (c *Client) CryptoSign(input []*CryptoSignInput) (signatures [][]string, err error) {
 	var reqBody []byte
 	if reqBody, err = json.Marshal(input); err != nil {
@@ -367,8 +362,8 @@ func (c *Client) CryptoSign(input []*CryptoSignInput) (signatures [][]string, er
 
 // Verify data signature
 //
-// // sample code
-// result, err := client.CryptoVerify([]*kastela.CryptoVerifyInput{{Signature: "your-sign", Value: "raw-value"}})
+//	// sample code
+//	result, err := client.CryptoVerify([]*kastela.CryptoVerifyInput{{Signature: "your-sign", Value: "raw-value"}})
 func (c *Client) CryptoVerify(input []*CryptoVerifyInput) (result []bool, err error) {
 	var reqBody []byte
 	if reqBody, err = json.Marshal(input); err != nil {
