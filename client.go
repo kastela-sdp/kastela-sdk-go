@@ -652,8 +652,8 @@ func (c *Client) ProtectionFetch(input *ProtectionFetchInput) (primaryKeys []any
 // Count data protection
 //
 //	// sample code
-//	count, err := client.ProtectionCount([]*ProtectionCountInput{ProtectionID: "your-protection-id", Search: "foo"})
-func (c *Client) ProtectionCount(input []*ProtectionCountInput) (count uint64, err error) {
+//	count, err := client.ProtectionCount(&ProtectionCountInput{ProtectionID: "your-protection-id", Search: "foo"})
+func (c *Client) ProtectionCount(input *ProtectionCountInput) (count uint64, err error) {
 	var reqBody []byte
 	if reqBody, err = json.Marshal(input); err != nil {
 		return
