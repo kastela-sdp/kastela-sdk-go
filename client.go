@@ -137,6 +137,10 @@ type ProtectionCountInput struct {
 	Search       any    `json:"search"`
 }
 
+type ProtectionPruneInput struct {
+	ProtectionID string `json:"protection_id"`
+}
+
 type PrivacyProxyCommon struct {
 	Protections map[string]string   `json:"protections"`
 	Vaults      map[string][]string `json:"vaults"`
@@ -671,6 +675,23 @@ func (c *Client) ProtectionCount(input *ProtectionCountInput) (count uint64, err
 		return
 	}
 	count = uint64(body["count"].(float64))
+	return
+}
+
+// Prune data protection
+//
+//	// sample code
+//	err := client.ProtectionPrune([]*ProtectionPruneInput{{ProtectionID: "your-protection-id"}})
+func (c *Client) ProtectionPrune(input []*ProtectionPruneInput) (err error) {
+	var reqBody []byte
+	if reqBody, err = json.Marshal(input); err != nil {
+		return
+	}
+	var serverURL *url.URL
+	if serverURL, err = url.Parse(fmt.Sprintf(`%s/%s/prune`, c.kastelaURL, protectionPath)); err != nil {
+		return
+	}
+	_, err = c.request("POST", serverURL, reqBody)
 	return
 }
 
