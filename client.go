@@ -83,7 +83,7 @@ type VaultStoreInput struct {
 type VaultFetchInput struct {
 	VaultID string `json:"vault_id"`
 	Search  any    `json:"search"`
-	Size    uint64 `json:"size"`
+	Size    uint   `json:"size"`
 	After   string `json:"after"`
 }
 
@@ -468,7 +468,7 @@ func (c *Client) VaultFetch(input *VaultFetchInput) (tokens []string, err error)
 //
 //	// sample code
 //	count, err := client.VaultCount(&VaultCountInput{VaultID: "your-vault-id", Search: "foo"})
-func (c *Client) VaultCount(input *VaultCountInput) (count uint64, err error) {
+func (c *Client) VaultCount(input *VaultCountInput) (count uint, err error) {
 	body := map[string]any{
 		"vault_id": input.VaultID,
 		"search":   input.Search,
@@ -488,7 +488,7 @@ func (c *Client) VaultCount(input *VaultCountInput) (count uint64, err error) {
 	if err = json.Unmarshal(resBody, &body); err != nil {
 		return
 	}
-	count = uint64(body["count"].(float64))
+	count = uint(body["count"].(float64))
 	return
 }
 
@@ -657,7 +657,7 @@ func (c *Client) ProtectionFetch(input *ProtectionFetchInput) (primaryKeys []any
 //
 //	// sample code
 //	count, err := client.ProtectionCount(&ProtectionCountInput{ProtectionID: "your-protection-id", Search: "foo"})
-func (c *Client) ProtectionCount(input *ProtectionCountInput) (count uint64, err error) {
+func (c *Client) ProtectionCount(input *ProtectionCountInput) (count uint, err error) {
 	var reqBody []byte
 	if reqBody, err = json.Marshal(input); err != nil {
 		return
@@ -674,7 +674,7 @@ func (c *Client) ProtectionCount(input *ProtectionCountInput) (count uint64, err
 	if err = json.Unmarshal(resBody, &body); err != nil {
 		return
 	}
-	count = uint64(body["count"].(float64))
+	count = uint(body["count"].(float64))
 	return
 }
 
